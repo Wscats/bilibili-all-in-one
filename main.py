@@ -82,36 +82,38 @@ class BilibiliAllInOne:
             Action result dict.
         """
         skill_map = {
-            "bilibili_hot_monitor": self.hot_monitor,
-            "hot_monitor": self.hot_monitor,
-            "hot": self.hot_monitor,
+            "bilibili_hot_monitor": lambda: self.hot_monitor,
+            "hot_monitor": lambda: self.hot_monitor,
+            "hot": lambda: self.hot_monitor,
 
-            "bilibili_downloader": self.downloader,
-            "downloader": self.downloader,
-            "download": self.downloader,
+            "bilibili_downloader": lambda: self.downloader,
+            "downloader": lambda: self.downloader,
+            "download": lambda: self.downloader,
 
-            "bilibili_watcher": self.watcher,
-            "watcher": self.watcher,
-            "watch": self.watcher,
+            "bilibili_watcher": lambda: self.watcher,
+            "watcher": lambda: self.watcher,
+            "watch": lambda: self.watcher,
 
-            "bilibili_subtitle": self.subtitle,
-            "subtitle": self.subtitle,
+            "bilibili_subtitle": lambda: self.subtitle,
+            "subtitle": lambda: self.subtitle,
 
-            "bilibili_player": self.player,
-            "player": self.player,
-            "play": self.player,
+            "bilibili_player": lambda: self.player,
+            "player": lambda: self.player,
+            "play": lambda: self.player,
 
-            "bilibili_publisher": self.publisher,
-            "publisher": self.publisher,
-            "publish": self.publisher,
+            "bilibili_publisher": lambda: self.publisher,
+            "publisher": lambda: self.publisher,
+            "publish": lambda: self.publisher,
         }
 
-        skill = skill_map.get(skill_name)
-        if not skill:
+        skill_factory = skill_map.get(skill_name)
+        if not skill_factory:
             return {
                 "success": False,
                 "message": f"Unknown skill: {skill_name}. Available: {list(skill_map.keys())}",
             }
+
+        skill = skill_factory()
 
         return await skill.execute(action=action, **kwargs)
 

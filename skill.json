@@ -238,21 +238,58 @@
       "lxml>=4.9.0"
     ]
   },
+  "credentials": {
+    "description": "Bilibili session cookies required for authenticated operations (publishing, high-quality downloads, etc.). These are sensitive browser cookies — use a test account when possible.",
+    "required_for": ["bilibili_publisher", "bilibili_downloader (1080p+/4k quality)"],
+    "variables": [
+      {
+        "name": "BILIBILI_SESSDATA",
+        "type": "string",
+        "description": "Bilibili SESSDATA cookie for authenticated API access. Required for publishing and high-quality downloads.",
+        "required": true,
+        "sensitive": true
+      },
+      {
+        "name": "BILIBILI_BILI_JCT",
+        "type": "string",
+        "description": "Bilibili bili_jct cookie used as CSRF token. Required for all write operations (upload, edit, delete).",
+        "required": true,
+        "sensitive": true
+      },
+      {
+        "name": "BILIBILI_BUVID3",
+        "type": "string",
+        "description": "Bilibili buvid3 cookie for device identification. Required for authenticated sessions.",
+        "required": false,
+        "sensitive": true
+      }
+    ],
+    "security_notes": [
+      "Credentials are NEVER persisted to disk unless the user explicitly calls save_to_file().",
+      "Prefer passing credentials via environment variables or in-memory parameters.",
+      "All API requests go exclusively to official Bilibili endpoints (api.bilibili.com, member.bilibili.com).",
+      "Use a test/throwaway Bilibili account for evaluation purposes.",
+      "Credentials are only transmitted over HTTPS to Bilibili's official API servers."
+    ]
+  },
   "configuration": {
     "bilibili_sessdata": {
       "type": "string",
       "description": "Bilibili SESSDATA cookie for authenticated operations",
-      "required": false
+      "required": false,
+      "sensitive": true
     },
     "bilibili_bili_jct": {
       "type": "string",
       "description": "Bilibili bili_jct cookie for CSRF protection",
-      "required": false
+      "required": false,
+      "sensitive": true
     },
     "bilibili_buvid3": {
       "type": "string",
       "description": "Bilibili buvid3 cookie for device identification",
-      "required": false
+      "required": false,
+      "sensitive": true
     },
     "default_quality": {
       "type": "string",
@@ -264,5 +301,24 @@
       "description": "Default output directory",
       "default": "./output"
     }
-  }
+  },
+  "permissions": {
+    "network": {
+      "description": "HTTP/HTTPS requests to Bilibili and YouTube official APIs only",
+      "allowed_domains": [
+        "api.bilibili.com",
+        "member.bilibili.com",
+        "www.bilibili.com",
+        "upos-sz-upcdnbda2.bilivideo.com",
+        "www.youtube.com",
+        "noembed.com"
+      ]
+    },
+    "filesystem": {
+      "description": "Read/write access for downloading videos, subtitles, and uploading files",
+      "operations": ["read_local_files", "write_downloads", "write_subtitles"],
+      "note": "Credential files are NEVER auto-created. save_to_file() must be explicitly called by the user."
+    }
+  },
+  "always": false
 }

@@ -133,6 +133,11 @@ class BilibiliAuth:
     def save_to_file(self, filepath: str) -> None:
         """Save current credentials to a JSON file.
 
+        WARNING: This persists sensitive session cookies to disk. Only call this
+        method when explicitly requested by the user. The file is created with
+        restrictive permissions (owner read/write only, 0600) to minimize
+        exposure risk.
+
         Args:
             filepath: Path to save the credential file.
         """
@@ -142,5 +147,12 @@ class BilibiliAuth:
             "buvid3": self.buvid3,
         }
         os.makedirs(os.path.dirname(filepath) or ".", exist_ok=True)
-        with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(cred, f, indent=2)
+
+        # Open with restrictive permissions (0600 = owner read/write only)
+        fd = os.open(filepath, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(cred, f, indent=2)
+        except Exception:
+            os.close(fd)
+            raise

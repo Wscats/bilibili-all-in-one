@@ -2,8 +2,28 @@
 
 A comprehensive Bilibili toolkit that integrates hot trending monitoring, video downloading, video watching/playback, subtitle downloading, and video publishing capabilities into a single unified skill.
 
-## Features
+---
 
+### 何时激活
+
+当用户说出或暗示以下内容时，本 Skill 会被激活：
+
+| 触发场景 | 匹配的模块 | 典型触发词 |
+|---|---|---|
+| 查看B站热门、热搜、排行榜、必看榜 | 🔥 Hot Monitor | "热门"、"热搜"、"排行"、"趋势"、"必看"、"流行"、"榜单" |
+| 下载B站视频、提取音频、批量下载 | ⬇️ Downloader | "下载"、"保存视频"、"提取音频"、"导出MP4"、"批量下载" |
+| 查看视频播放量、点赞数、数据追踪、对比 | 👀 Watcher | "播放量"、"点赞"、"数据"、"统计"、"对比"、"监控"、"追踪"、"观看量" |
+| 下载字幕、转换字幕格式、合并字幕 | 📝 Subtitle | "字幕"、"CC"、"SRT"、"ASS"、"字幕下载"、"字幕转换"、"翻译" |
+| 播放视频、获取弹幕、播放列表 | ▶️ Player | "播放"、"弹幕"、"播放地址"、"分P"、"播放列表"、"danmaku" |
+| 上传视频、发布、定时发布、草稿、编辑、删除 | 📤 Publisher | "上传"、"发布"、"投稿"、"定时发布"、"草稿"、"编辑视频"、"删除视频" |
+| 涉及YouTube视频数据查询 | 👀 Watcher | "YouTube"、"油管"、"YTB"、"YouTube观看量" |
+| 提及B站链接或BV号 | 自动识别 | `BV*`、`bilibili.com/video/*`、`b23.tv/*` |
+
+> 💡 **提示**：只要用户消息中包含 B站/Bilibili 相关操作意图，或包含 BV 号、bilibili 链接，本 Skill 即会被自动激活。无需显式声明调用。
+
+---
+
+## Features
 | Module | Description |
 |---|---|
 | 🔥 **Hot Monitor** | Monitor Bilibili hot/trending videos and topics in real-time |
@@ -74,6 +94,51 @@ app = BilibiliAllInOne(
 ```
 
 > **How to get cookies:** Log in to [bilibili.com](https://www.bilibili.com), open browser DevTools (F12) → Application → Cookies, and copy the values of `SESSDATA`, `bili_jct`, and `buvid3`.
+
+## ⚠️ Security & Privacy
+
+### Credential Handling
+
+This skill handles **sensitive Bilibili session cookies**. Please read the following carefully:
+
+| Concern | Detail |
+|---|---|
+| **What credentials are needed?** | `SESSDATA`, `bili_jct`, `buvid3` — Bilibili browser cookies |
+| **Which features require authentication?** | Publishing (upload/edit/delete/schedule/draft), downloading 1080p+/4K quality videos |
+| **Which features work WITHOUT credentials?** | Hot monitoring, standard-quality downloads, subtitle listing, danmaku fetching, stats viewing |
+| **Where are credentials sent?** | **Exclusively** to official Bilibili API endpoints (`api.bilibili.com`, `member.bilibili.com`) over HTTPS |
+| **Are credentials persisted to disk?** | **NO** — unless you explicitly call `auth.save_to_file()`. Credentials stay in memory by default |
+| **File permissions for saved credentials** | `0600` (owner read/write only) — restrictive by default |
+
+### Best Practices
+
+1. 🧪 **Use a test account** — Do NOT provide your primary Bilibili account cookies for evaluation/testing purposes.
+2. 🔒 **Prefer in-memory credentials** — Pass credentials via environment variables or direct parameters rather than saving to a file.
+3. 📁 **If you must save credentials** — Use `auth.save_to_file()` which creates files with `0600` permissions. Delete the file when no longer needed.
+4. 🐳 **Run in isolation** — When possible, run this skill in an isolated container/environment and inspect network traffic.
+5. 🌐 **Verify network traffic** — All HTTP requests go to Bilibili's official domains only. You can verify by monitoring outbound connections.
+6. ❌ **No exfiltration** — This skill does NOT send credentials to any third-party service, analytics endpoint, or telemetry server.
+
+### Network Endpoints Used
+
+| Domain | Purpose |
+|---|---|
+| `api.bilibili.com` | Video info, stats, hot lists, subtitles, danmaku, playback URLs |
+| `member.bilibili.com` | Video publishing (upload, edit, delete) |
+| `upos-sz-upcdnbda2.bilivideo.com` | Video file upload CDN |
+| `www.bilibili.com` | Web page scraping fallback |
+| `noembed.com` | YouTube video metadata (oembed, no auth required) |
+
+### Credential Requirement by Module
+
+| Module | Auth Required? | Notes |
+|---|---|---|
+| 🔥 Hot Monitor | ❌ No | All public APIs |
+| ⬇️ Downloader | ⚠️ Optional | Required only for 1080p+ / 4K quality |
+| 👀 Watcher | ❌ No | Public stats APIs |
+| 📝 Subtitle | ❌ No | Public subtitle APIs |
+| ▶️ Player | ⚠️ Optional | Required for high-quality playback URLs |
+| 📤 Publisher | ✅ **Required** | All operations need `SESSDATA` + `bili_jct` |
 
 ## Usage
 
