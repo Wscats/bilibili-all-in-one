@@ -4,6 +4,44 @@
   "version": "1.0.0",
   "author": "reky",
   "license": "MIT",
+  "requirements": {
+    "env_vars": [
+      {
+        "name": "BILIBILI_SESSDATA",
+        "description": "Bilibili SESSDATA cookie for authenticated API access (publishing, high-quality downloads)",
+        "required_for": ["bilibili_publisher", "bilibili_downloader (1080p+)"],
+        "sensitive": true
+      },
+      {
+        "name": "BILIBILI_BILI_JCT",
+        "description": "Bilibili bili_jct cookie (CSRF token) for all write operations (upload, edit, delete)",
+        "required_for": ["bilibili_publisher"],
+        "sensitive": true
+      },
+      {
+        "name": "BILIBILI_BUVID3",
+        "description": "Bilibili buvid3 cookie for device identification in authenticated sessions",
+        "required_for": ["bilibili_publisher"],
+        "sensitive": true
+      }
+    ],
+    "python": ">=3.8",
+    "system": ["ffmpeg (optional, for merging video/audio streams)"]
+  },
+  "install": {
+    "method": "pip",
+    "command": "pip install -r requirements.txt",
+    "packages": [
+      "httpx>=0.24.0",
+      "bilibili-api-python>=16.0.0",
+      "aiohttp>=3.8.0",
+      "beautifulsoup4>=4.12.0",
+      "lxml>=4.9.0",
+      "requests>=2.31.0"
+    ],
+    "source": "pypi",
+    "note": "All packages are standard PyPI packages. No opaque downloads or external installers."
+  },
   "skills": [
     {
       "name": "bilibili_hot_monitor",
@@ -235,8 +273,28 @@
       "bilibili-api-python>=16.0.0",
       "aiohttp>=3.8.0",
       "beautifulsoup4>=4.12.0",
-      "lxml>=4.9.0"
+      "lxml>=4.9.0",
+      "requests>=2.31.0"
     ]
+  },
+  "data_handling": {
+    "credentials_persistence": {
+      "default": "in-memory only",
+      "optional_disk_save": "Only via explicit user call to auth.save_to_file(). File created with 0600 permissions.",
+      "auto_persist": false
+    },
+    "network_communication": {
+      "protocol": "HTTPS only",
+      "destinations": [
+        "api.bilibili.com",
+        "member.bilibili.com",
+        "upos-sz-upcdnbda2.bilivideo.com",
+        "www.bilibili.com",
+        "noembed.com"
+      ],
+      "third_party_telemetry": false,
+      "analytics": false
+    }
   },
   "credentials": {
     "description": "Bilibili session cookies required for authenticated operations (publishing, high-quality downloads, etc.). These are sensitive browser cookies — use a test account when possible.",
