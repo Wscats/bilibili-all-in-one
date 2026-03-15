@@ -2,8 +2,15 @@
 
 A comprehensive Bilibili toolkit that integrates hot trending monitoring, video downloading, video watching/playback, subtitle downloading, and video publishing capabilities into a single unified skill.
 
----
+> **⚠️ Required Environment Variables:** `BILIBILI_SESSDATA`, `BILIBILI_BILI_JCT`, `BILIBILI_BUVID3`
+> These are sensitive Bilibili session cookies needed for authenticated operations (publishing, high-quality downloads).
+> Features that do NOT require authentication: hot monitoring, standard-quality downloads, subtitle listing, danmaku, stats viewing.
+>
+> **📦 Install:** `pip install -r requirements.txt` (all standard PyPI packages: httpx, bilibili-api-python, aiohttp, beautifulsoup4, lxml, requests)
+>
+> **🔗 Source:** [github.com/wscats/bilibili-all-in-one](https://github.com/wscats/bilibili-all-in-one)
 
+---
 ### 何时激活
 
 当用户说出或暗示以下内容时，本 Skill 会被激活：
