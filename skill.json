@@ -1,7 +1,7 @@
 {
   "name": "bilibili-all-in-one",
   "description": "A comprehensive Bilibili toolkit that integrates hot trending monitoring, video downloading, video watching/playback, subtitle downloading, and video publishing capabilities into a single skill.",
-  "version": "1.0.0",
+  "version": "1.0.6",
   "author": "wscats",
   "license": "MIT",
   "homepage": "https://github.com/wscats/bilibili-all-in-one",
@@ -10,6 +10,19 @@
   "type": "code",
   "runtime": "python>=3.8",
   "entry_point": "main.py",
+  "requirements": {
+    "env_vars": "BILIBILI_SESSDATA (required, sensitive), BILIBILI_BILI_JCT (required, sensitive), BILIBILI_BUVID3 (optional, sensitive)",
+    "install": "pip install -r requirements.txt",
+    "runtime": "python>=3.8"
+  },
+  "install_spec": {
+    "type": "pip",
+    "command": "pip install -r requirements.txt",
+    "dependencies": ["httpx>=0.24.0", "bilibili-api-python>=16.0.0", "aiohttp>=3.8.0", "beautifulsoup4>=4.12.0", "lxml>=4.9.0", "requests>=2.31.0"],
+    "source": "pypi"
+  },
+  "required_env_vars": ["BILIBILI_SESSDATA", "BILIBILI_BILI_JCT"],
+  "optional_env_vars": ["BILIBILI_BUVID3"],
   "install": {
     "method": "pip",
     "command": "pip install -r requirements.txt",
