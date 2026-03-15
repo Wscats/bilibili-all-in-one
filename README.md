@@ -7,7 +7,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/python-%3E%3D3.8-blue?logo=python&logoColor=white" />
   <img src="https://img.shields.io/badge/license-MIT-green" />
-  <img src="https://img.shields.io/badge/version-1.0.0-orange" />
+  <img src="https://img.shields.io/badge/version-1.0.9-orange" />
   <img src="https://img.shields.io/badge/platform-Bilibili%20%7C%20YouTube-pink" />
 </p>
 
@@ -40,7 +40,7 @@
 ### 安装依赖
 
 ```bash
-git clone https://github.com/your-username/bilibili-all-in-one.git
+git clone https://github.com/wscats/bilibili-all-in-one.git
 cd bilibili-all-in-one
 pip install -r requirements.txt
 ```
@@ -402,7 +402,7 @@ result = await app.execute("publisher", "upload",
 | `member.bilibili.com` | 视频发布（上传、编辑、删除） |
 | `upos-sz-upcdnbda2.bilivideo.com` | 视频文件上传 CDN |
 | `www.bilibili.com` | 网页数据抓取备用 |
-| `noembed.com` | YouTube 视频元数据获取（无需认证） |
+| `www.youtube.com` | YouTube 视频元数据获取（oEmbed API，无需认证） |
 
 ### 安全建议
 

@@ -1,7 +1,7 @@
 {
   "name": "bilibili-all-in-one",
   "description": "A comprehensive Bilibili toolkit that integrates hot trending monitoring, video downloading, video watching/playback, subtitle downloading, and video publishing capabilities into a single skill.",
-  "version": "1.0.9",
+"version": "1.0.12",
   "author": "wscats",
   "license": "MIT",
   "homepage": "https://github.com/wscats/bilibili-all-in-one",
@@ -54,7 +54,7 @@
     "security_notes": [
       "Credentials are NEVER persisted to disk unless the user explicitly calls save_to_file().",
       "Prefer passing credentials via environment variables or in-memory parameters.",
-      "All API requests go exclusively to official Bilibili endpoints over HTTPS.",
+"All API requests go to official Bilibili endpoints and YouTube oEmbed API over HTTPS.",
       "Use a test/throwaway Bilibili account for evaluation purposes."
     ]
   },
@@ -65,7 +65,7 @@
       "member.bilibili.com",
       "upos-sz-upcdnbda2.bilivideo.com",
       "www.bilibili.com",
-      "noembed.com"
+      "www.youtube.com"
     ],
     "third_party_telemetry": false,
     "analytics": false
@@ -345,14 +345,13 @@
   },
   "permissions": {
     "network": {
-      "description": "HTTP/HTTPS requests to Bilibili and YouTube official APIs only",
+      "description": "HTTP/HTTPS requests to Bilibili official APIs and YouTube oEmbed API",
       "allowed_domains": [
         "api.bilibili.com",
         "member.bilibili.com",
         "www.bilibili.com",
         "upos-sz-upcdnbda2.bilivideo.com",
-        "www.youtube.com",
-        "noembed.com"
+        "www.youtube.com"
       ]
     },
     "filesystem": {

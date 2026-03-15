@@ -1,8 +1,49 @@
+---
+name: bilibili-all-in-one
+description: >
+  A comprehensive Bilibili toolkit that integrates hot trending monitoring,
+  video downloading, video watching/playback, subtitle downloading,
+  and video publishing capabilities into a single unified skill.
+  Supports Bilibili session cookie authentication for publishing and
+  high-quality downloads. Requests go to official Bilibili API endpoints
+  and YouTube oEmbed API (for YouTube stats) over HTTPS.
+version: 1.0.12
+type: code
+implementation: python
+interface: cli-and-api
+runtime: python>=3.8
+languages:
+  - zh-CN
+  - en
+tags:
+  - bilibili
+  - video-download
+  - hot-trending
+  - subtitle
+  - danmaku
+  - video-publish
+  - video-player
+  - youtube-stats
+  - batch-download
+  - multi-format
+author: wscats
+license: MIT
+homepage: https://github.com/wscats/bilibili-all-in-one
+repository: https://github.com/wscats/bilibili-all-in-one
+entry_point: main.py
+required_env_vars:
+  - BILIBILI_SESSDATA
+  - BILIBILI_BILI_JCT
+optional_env_vars:
+  - BILIBILI_BUVID3
+install: pip install -r requirements.txt
+---
+
 # Bilibili All-in-One Skill
 
 A comprehensive Bilibili toolkit that integrates hot trending monitoring, video downloading, video watching/playback, subtitle downloading, and video publishing capabilities into a single unified skill.
 
-> **⚠️ Required Environment Variables:** `BILIBILI_SESSDATA`, `BILIBILI_BILI_JCT`, `BILIBILI_BUVID3`
+> **⚠️ Required Environment Variables:** `BILIBILI_SESSDATA`, `BILIBILI_BILI_JCT` (required), `BILIBILI_BUVID3` (optional)
 > These are sensitive Bilibili session cookies needed for authenticated operations (publishing, high-quality downloads).
 > Features that do NOT require authentication: hot monitoring, standard-quality downloads, subtitle listing, danmaku, stats viewing.
 >
@@ -113,7 +154,7 @@ This skill handles **sensitive Bilibili session cookies**. Please read the follo
 | **What credentials are needed?** | `SESSDATA`, `bili_jct`, `buvid3` — Bilibili browser cookies |
 | **Which features require authentication?** | Publishing (upload/edit/delete/schedule/draft), downloading 1080p+/4K quality videos |
 | **Which features work WITHOUT credentials?** | Hot monitoring, standard-quality downloads, subtitle listing, danmaku fetching, stats viewing |
-| **Where are credentials sent?** | **Exclusively** to official Bilibili API endpoints (`api.bilibili.com`, `member.bilibili.com`) over HTTPS |
+| **Where are credentials sent?** | To official Bilibili API endpoints (`api.bilibili.com`, `member.bilibili.com`) over HTTPS. YouTube metadata uses `www.youtube.com/oembed` (no credentials sent) |
 | **Are credentials persisted to disk?** | **NO** — unless you explicitly call `auth.save_to_file()`. Credentials stay in memory by default |
 | **File permissions for saved credentials** | `0600` (owner read/write only) — restrictive by default |
 
@@ -123,7 +164,7 @@ This skill handles **sensitive Bilibili session cookies**. Please read the follo
 2. 🔒 **Prefer in-memory credentials** — Pass credentials via environment variables or direct parameters rather than saving to a file.
 3. 📁 **If you must save credentials** — Use `auth.save_to_file()` which creates files with `0600` permissions. Delete the file when no longer needed.
 4. 🐳 **Run in isolation** — When possible, run this skill in an isolated container/environment and inspect network traffic.
-5. 🌐 **Verify network traffic** — All HTTP requests go to Bilibili's official domains only. You can verify by monitoring outbound connections.
+5. 🌐 **Verify network traffic** — All HTTP requests go to Bilibili's official domains and YouTube oEmbed API only. You can verify by monitoring outbound connections.
 6. ❌ **No exfiltration** — This skill does NOT send credentials to any third-party service, analytics endpoint, or telemetry server.
 
 ### Network Endpoints Used
@@ -134,7 +175,7 @@ This skill handles **sensitive Bilibili session cookies**. Please read the follo
 | `member.bilibili.com` | Video publishing (upload, edit, delete) |
 | `upos-sz-upcdnbda2.bilivideo.com` | Video file upload CDN |
 | `www.bilibili.com` | Web page scraping fallback |
-| `noembed.com` | YouTube video metadata (oembed, no auth required) |
+| `www.youtube.com` | YouTube video metadata via oEmbed API (no auth required) |
 
 ### Credential Requirement by Module
 
@@ -470,7 +511,10 @@ result = await app.execute("publisher", "upload",
 bilibili-all-in-one/
 ├── skill.json              # Skill configuration & parameter schema
 ├── skill.md                # This documentation file
+├── README.md               # Project README (Chinese)
+├── LICENSE                  # MIT License
 ├── requirements.txt        # Python dependencies
+├── .gitignore              # Git ignore rules
 ├── main.py                 # Entry point & unified BilibiliAllInOne class
 ├── src/
 │   ├── __init__.py         # Package exports
@@ -483,7 +527,8 @@ bilibili-all-in-one/
 │   ├── player.py           # Video playback & danmaku
 │   └── publisher.py        # Video uploading & publishing
 └── tests/
-    └── __init__.py
+    ├── __init__.py
+    └── test_all_skill_examples.py  # Comprehensive unit tests
 ```
 
 ## Skill Origin
