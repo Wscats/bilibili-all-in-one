@@ -1,7 +1,7 @@
 {
   "name": "bilibili-all-in-one",
   "description": "A comprehensive Bilibili toolkit that integrates hot trending monitoring, video downloading, video watching/playback, subtitle downloading, and video publishing capabilities into a single skill.",
-  "version": "1.0.6",
+  "version": "1.0.8",
   "author": "wscats",
   "license": "MIT",
   "homepage": "https://github.com/wscats/bilibili-all-in-one",
