@@ -1,9 +1,43 @@
-__pycache__/
-*.py[cod]
-*.pyo
-*.egg-info/
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
 dist/
 build/
-*.egg
+out/
+.next/
+.nuxt/
+
+# Cache
+.cache/
+.parcel-cache/
+.eslintcache
+
+# Environment
 .env
-credentials.json
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+
+# TypeScript
+*.tsbuildinfo
+
+# Coverage
+coverage/
+.nyc_output/
