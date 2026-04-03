@@ -1,7 +1,7 @@
 {
   "name": "bilibili-all-in-one",
   "description": "A comprehensive Bilibili toolkit that integrates hot trending monitoring, video downloading, video watching/playback, subtitle downloading, and video publishing capabilities into a single skill.",
-"version": "1.0.12",
+"version": "1.0.13",
   "author": "wscats",
   "license": "MIT",
   "homepage": "https://github.com/wscats/bilibili-all-in-one",
@@ -50,12 +50,15 @@
   ],
   "credentials": {
     "primary_credential": "BILIBILI_SESSDATA",
+    "credential_type": "full_session_cookies",
+    "credential_scope_warning": "These are full browser session cookies (not limited API keys). Providing them grants the skill broad access to your Bilibili account. Use a test/throwaway account.",
     "storage": "in-memory by default; disk persistence only via explicit auth.save_to_file() call with 0600 permissions",
     "security_notes": [
       "Credentials are NEVER persisted to disk unless the user explicitly calls save_to_file().",
       "Prefer passing credentials via environment variables or in-memory parameters.",
-"All API requests go to official Bilibili endpoints over HTTPS.",
-      "Use a test/throwaway Bilibili account for evaluation purposes."
+      "All API requests go to official Bilibili endpoints over HTTPS.",
+      "Use a test/throwaway Bilibili account for evaluation purposes.",
+      "These are full session cookies — treat them as highly sensitive. They grant broad account access, not just limited API scope."
     ]
   },
   "network": {
@@ -364,5 +367,6 @@
       "note": "Credential files are NEVER auto-created. save_to_file() must be explicitly called by the user."
     }
   },
-  "always": false
+  "always": false,
+  "disable_model_invocation": false
 }

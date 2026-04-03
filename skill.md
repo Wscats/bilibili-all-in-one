@@ -7,7 +7,7 @@ description: >
   Supports Bilibili session cookie authentication for publishing and
   high-quality downloads. Requests go to official Bilibili API endpoints
   over HTTPS.
-version: 1.0.12
+version: 1.0.13
 type: code
 implementation: python
 interface: cli-and-api
@@ -152,21 +152,22 @@ This skill handles **sensitive Bilibili session cookies**. Please read the follo
 
 | Concern | Detail |
 |---|---|
-| **What credentials are needed?** | `SESSDATA`, `bili_jct`, `buvid3` — Bilibili browser cookies |
+| **What credentials are needed?** | `SESSDATA`, `bili_jct`, `buvid3` — Bilibili **full browser session cookies** (not limited API keys). Providing them grants broad access to your Bilibili account. |
 | **Which features require authentication?** | Publishing (upload/edit/delete/schedule/draft), downloading 1080p+/4K quality videos |
 | **Which features work WITHOUT credentials?** | Hot monitoring, standard-quality downloads, subtitle listing, danmaku fetching, stats viewing |
-| **Where are credentials sent?** | To official Bilibili API endpoints (`api.bilibili.com`, `member.bilibili.com`) over HTTPS |
+| **Where are credentials sent?** | To official Bilibili API endpoints (`api.bilibili.com`, `member.bilibili.com`, `passport.bilibili.com`) over HTTPS only |
 | **Are credentials persisted to disk?** | **NO** — unless you explicitly call `auth.save_to_file()`. Credentials stay in memory by default |
 | **File permissions for saved credentials** | `0600` (owner read/write only) — restrictive by default |
 
 ### Best Practices
 
-1. 🧪 **Use a test account** — Do NOT provide your primary Bilibili account cookies for evaluation/testing purposes.
+1. 🧪 **Use a test account** — Do NOT provide your primary Bilibili account cookies for evaluation/testing purposes. These are **full session cookies** that grant broad account access (not limited API keys).
 2. 🔒 **Prefer in-memory credentials** — Pass credentials via environment variables or direct parameters rather than saving to a file.
 3. 📁 **If you must save credentials** — Use `auth.save_to_file()` which creates files with `0600` permissions. Delete the file when no longer needed.
 4. 🐳 **Run in isolation** — When possible, run this skill in an isolated container/environment and inspect network traffic.
 5. 🌐 **Verify network traffic** — All HTTP requests go to Bilibili's official domains only. You can verify by monitoring outbound connections.
 6. ❌ **No exfiltration** — This skill does NOT send credentials to any third-party service, analytics endpoint, or telemetry server.
+7. 🔑 **Credential scope** — `SESSDATA` and `bili_jct` are full session cookies. They are NOT scoped/limited API keys. Treat them with the same care as your account password.
 
 ### Network Endpoints Used
 
