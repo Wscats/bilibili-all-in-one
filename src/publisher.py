@@ -15,11 +15,12 @@ from .utils import DEFAULT_HEADERS, API_BASE, ensure_dir
 # Publishing API endpoints
 PREUPLOAD_URL = "https://member.bilibili.com/preupload"
 UPLOAD_URL = "https://upos-sz-upcdnbda2.bilivideo.com"
-ADD_VIDEO_URL = f"{API_BASE}/x/vu/web/add"
-EDIT_VIDEO_URL = f"{API_BASE}/x/vu/web/edit"
-DELETE_VIDEO_URL = f"{API_BASE}/x/vu/web/archive/del"
-DRAFT_ADD_URL = f"{API_BASE}/x/vu/web/draft/add"
-COVER_UPLOAD_URL = f"{API_BASE}/x/vu/web/cover/up"
+MEMBER_API_BASE = "https://member.bilibili.com"
+ADD_VIDEO_URL = f"{MEMBER_API_BASE}/x/vu/web/add"
+EDIT_VIDEO_URL = f"{MEMBER_API_BASE}/x/vu/web/edit"
+DELETE_VIDEO_URL = f"{MEMBER_API_BASE}/x/vu/web/archive/del"
+DRAFT_ADD_URL = f"{MEMBER_API_BASE}/x/vu/web/draft/add"
+COVER_UPLOAD_URL = f"{MEMBER_API_BASE}/x/vu/web/cover/up"
 
 
 class BilibiliPublisher:
@@ -640,8 +641,24 @@ class BilibiliPublisher:
             payload["dtime"] = dtime
 
         async with self._get_client() as client:
-            resp = await client.post(ADD_VIDEO_URL, json=payload)
-            data = resp.json()
+            params = {"csrf": self.auth.csrf}
+            resp = await client.post(
+                ADD_VIDEO_URL,
+                params=params,
+                json=payload,
+            )
+            if resp.status_code != 200:
+                return {
+                    "success": False,
+                    "message": f"HTTP {resp.status_code}: {resp.text[:500]}",
+                }
+            try:
+                data = resp.json()
+            except Exception:
+                return {
+                    "success": False,
+                    "message": f"Invalid JSON response: {resp.text[:500]}",
+                }
 
         if data.get("code") != 0:
             return {"success": False, "message": data.get("message", "Submit failed")}
