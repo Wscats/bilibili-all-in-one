@@ -390,28 +390,6 @@ class TestWatcherExamples(unittest.TestCase):
         self.assertIn("ranking", result)
         self.assertEqual(len(result["ranking"]), 2)
 
-    # ── Example 9: watch YouTube ─────────────────────────────────────
-    def test_example_09_watch_youtube(self):
-        """用户: 这个YouTube视频有多少观看量？
-        Agent → bilibili_watcher(action="watch",
-                 url="https://www.youtube.com/watch?v=dQw4w9WgXcQ")
-        """
-        # YouTube watch falls back to oembed or returns platform info
-        oembed_resp = _mock_response({
-            "title": "Never Gonna Give You Up",
-            "author_name": "Rick Astley",
-            "author_url": "https://www.youtube.com/@RickAstley",
-            "thumbnail_url": "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
-        })
-        _patch_client(self.app.watcher, [oembed_resp])
-
-        result = _run(self.app.execute(
-            "watcher", "watch",
-            url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-        ))
-        # YouTube handling may vary — just verify the action dispatched correctly
-        self.assertIn("success", result)
-
     # ── Example 19: track ────────────────────────────────────────────
     def test_example_19_track(self):
         """用户: 监控这个视频的数据变化，每半小时看一次，跟踪6小时
@@ -767,21 +745,37 @@ class TestPublisherExamples(unittest.TestCase):
         Agent → bilibili_publisher(action="edit",
                  bvid="BV1xx411c7mD", title="新标题", tags=["新标签"])
         """
-        # First call: get current video info
-        info_resp = _mock_response(_bilibili_ok(_video_info_payload()))
-        # Second call: edit API response
-        edit_resp = _mock_response(_bilibili_ok({}))
+        with tempfile.TemporaryDirectory() as tmpdir:
+            video_path = os.path.join(tmpdir, "video.mp4")
+            with open(video_path, "wb") as f:
+                f.write(b"\x00" * 1024)
 
-        _patch_client(self.app.publisher, [info_resp, edit_resp])
+            # First call: get current video info
+            info_resp = _mock_response(_bilibili_ok(_video_info_payload()))
+            # Second call: edit API response
+            edit_resp = _mock_response(_bilibili_ok({}))
 
-        result = _run(self.app.execute(
-            "publisher", "edit",
-            bvid="BV1xx411c7mD",
-            title="新标题",
-            tags=["新标签"],
-        ))
-        self.assertTrue(result["success"])
-        self.assertEqual(result["bvid"], "BV1xx411c7mD")
+            _patch_client(self.app.publisher, [info_resp, edit_resp])
+
+            async def mock_preupload(file_path):
+                return {"success": True, "upload_url": "u", "auth": "a",
+                        "biz_id": 1, "upos_uri": "u"}
+
+            async def mock_upload_file(file_path, preupload_result):
+                return {"success": True, "filename": "reuploaded.mp4"}
+
+            self.app.publisher._preupload = mock_preupload
+            self.app.publisher._upload_file = mock_upload_file
+
+            result = _run(self.app.execute(
+                "publisher", "edit",
+                bvid="BV1xx411c7mD",
+                title="新标题",
+                tags=["新标签"],
+                file_path=video_path,
+            ))
+            self.assertTrue(result["success"])
+            self.assertEqual(result["bvid"], "BV1xx411c7mD")
 
 
 class TestUnknownActions(unittest.TestCase):

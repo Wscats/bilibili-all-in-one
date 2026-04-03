@@ -2,6 +2,7 @@
 
 import json
 import os
+import tempfile
 from typing import Optional, Dict, Any, List
 
 import httpx
@@ -23,15 +24,20 @@ class SubtitleDownloader:
     Supports multiple subtitle formats (SRT, ASS, VTT, TXT, JSON) and languages.
     """
 
-    def __init__(self, auth: Optional[BilibiliAuth] = None, output_dir: str = "./subtitles"):
+    def __init__(self, auth: Optional[BilibiliAuth] = None, output_dir: str = "./subtitles",
+                 downloader=None, player=None):
         """Initialize SubtitleDownloader.
 
         Args:
             auth: Optional BilibiliAuth instance for authenticated requests.
             output_dir: Default output directory for subtitle files.
+            downloader: Optional BilibiliDownloader instance for audio download fallback.
+            player: Optional BilibiliPlayer instance for danmaku fallback.
         """
         self.auth = auth
         self.output_dir = output_dir
+        self.downloader = downloader
+        self.player = player
 
     def _get_client(self) -> httpx.AsyncClient:
         """Get an HTTP client, using auth if available."""
@@ -134,6 +140,15 @@ class SubtitleDownloader:
 
         if not target_sub:
             available = [s["language"] for s in sub_list.get("subtitles", [])]
+            # Fallback: try speech recognition, then danmaku
+            if not available:
+                return await self._fallback_get_text(
+                    url=url,
+                    bvid=sub_list.get("bvid", ""),
+                    title=sub_list.get("title", ""),
+                    format=format,
+                    output_dir=out_dir,
+                )
             return {
                 "success": False,
                 "message": f"Subtitle for language '{language}' not found. Available: {available}",
@@ -293,6 +308,223 @@ class SubtitleDownloader:
             "format": output_format,
             "total_entries": len(all_body),
             "merged_files": len(input_paths),
+        }
+
+    async def _fallback_get_text(
+        self,
+        url: str,
+        bvid: str,
+        title: str,
+        format: str = "srt",
+        output_dir: str = "./subtitles",
+    ) -> Dict[str, Any]:
+        """Fallback strategy when no CC subtitles are available.
+
+        Strategy 1: Download audio and transcribe using faster-whisper.
+        Strategy 2: Fetch danmaku (bullet comments) as text reference.
+
+        Both strategies run and results are returned together.
+
+        Args:
+            url: Bilibili video URL or BV number.
+            bvid: Video BV ID.
+            title: Video title.
+            format: Output subtitle format.
+            output_dir: Output directory for subtitle files.
+
+        Returns:
+            Combined result dict with transcription and/or danmaku.
+        """
+        results = {
+            "success": False,
+            "bvid": bvid,
+            "title": title,
+            "cc_subtitle": False,
+            "message": "No CC subtitles available. Attempting fallback strategies...",
+        }
+
+        # --- Strategy 1: Speech recognition via faster-whisper ---
+        transcribe_result = await self._transcribe_fallback(url, bvid, title, format, output_dir)
+        if transcribe_result.get("success"):
+            results["success"] = True
+            results["transcription"] = transcribe_result
+        else:
+            results["transcription"] = {"success": False, "message": transcribe_result.get("message", "Transcription failed")}
+
+        # --- Strategy 2: Danmaku as text reference ---
+        danmaku_result = await self._danmaku_fallback(url, bvid, title, output_dir)
+        if danmaku_result.get("success"):
+            results["success"] = True
+            results["danmaku"] = danmaku_result
+        else:
+            results["danmaku"] = {"success": False, "message": danmaku_result.get("message", "Danmaku fetch failed")}
+
+        if results["success"]:
+            results["message"] = "No CC subtitles found. Fallback results provided."
+        else:
+            results["message"] = "No CC subtitles found. All fallback strategies failed."
+
+        return results
+
+    async def _transcribe_fallback(
+        self,
+        url: str,
+        bvid: str,
+        title: str,
+        format: str = "srt",
+        output_dir: str = "./subtitles",
+    ) -> Dict[str, Any]:
+        """Fallback: download audio and transcribe using faster-whisper.
+
+        Args:
+            url: Bilibili video URL or BV number.
+            bvid: Video BV ID.
+            title: Video title.
+            format: Output subtitle format.
+            output_dir: Output directory.
+
+        Returns:
+            Transcription result dict.
+        """
+        try:
+            from faster_whisper import WhisperModel
+        except ImportError:
+            return {
+                "success": False,
+                "message": "Speech recognition requires 'faster-whisper'. "
+                           "Install with: pip install faster-whisper",
+            }
+
+        if not self.downloader:
+            return {
+                "success": False,
+                "message": "Speech recognition requires a downloader instance.",
+            }
+
+        # Step 1: Download audio to a temporary directory
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            download_result = await self.downloader.download(
+                url=url, format="mp3", output_dir=tmp_dir,
+            )
+            if not download_result.get("success"):
+                return {
+                    "success": False,
+                    "message": f"Audio download failed: {download_result.get('message', 'unknown error')}",
+                }
+
+            audio_path = download_result["filepath"]
+
+            # Step 2: Transcribe audio using faster-whisper
+            model = WhisperModel("base", device="cpu", compute_type="int8")
+            segments, info = model.transcribe(audio_path, language="zh", beam_size=5)
+
+            # Collect transcription results into subtitle body format
+            body = []
+            for segment in segments:
+                text = segment.text.strip()
+                if text:
+                    body.append({
+                        "from": segment.start,
+                        "to": segment.end,
+                        "content": text,
+                    })
+
+        if not body:
+            return {
+                "success": False,
+                "message": "Speech recognition produced no results.",
+            }
+
+        # Step 3: Convert and save
+        safe_title = sanitize_filename(title or bvid)
+        filename = f"{safe_title}_transcribed.{format}"
+        filepath = os.path.join(output_dir, filename)
+
+        converters = {
+            "srt": self._to_srt,
+            "ass": self._to_ass,
+            "vtt": self._to_vtt,
+            "txt": self._to_txt,
+            "json": self._to_json,
+        }
+        converter = converters.get(format, self._to_srt)
+        content = converter(body, safe_title)
+
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(content)
+
+        return {
+            "success": True,
+            "source": "speech_recognition",
+            "model": "faster-whisper (base)",
+            "language": f"zh (detected: {info.language}, prob: {info.language_probability:.2f})",
+            "format": format,
+            "filepath": filepath,
+            "entries": len(body),
+        }
+
+    async def _danmaku_fallback(
+        self,
+        url: str,
+        bvid: str,
+        title: str,
+        output_dir: str = "./subtitles",
+    ) -> Dict[str, Any]:
+        """Fallback: fetch danmaku (bullet comments) as text reference.
+
+        Args:
+            url: Bilibili video URL or BV number.
+            bvid: Video BV ID.
+            title: Video title.
+            output_dir: Output directory.
+
+        Returns:
+            Danmaku result dict.
+        """
+        if not self.player:
+            return {
+                "success": False,
+                "message": "Danmaku fallback requires a player instance.",
+            }
+
+        danmaku_result = await self.player.get_danmaku(url=url)
+        if not danmaku_result.get("success"):
+            return {
+                "success": False,
+                "message": f"Danmaku fetch failed: {danmaku_result.get('message', 'unknown error')}",
+            }
+
+        danmaku_list = danmaku_result.get("danmaku", [])
+        if not danmaku_list:
+            return {
+                "success": False,
+                "message": "No danmaku found for this video.",
+            }
+
+        # Convert danmaku to subtitle body format (sorted by time)
+        body = []
+        for dm in danmaku_list:
+            body.append({
+                "from": dm.get("time", 0),
+                "to": dm.get("time", 0) + 3.0,  # Danmaku display ~3 seconds
+                "content": dm.get("content", ""),
+            })
+
+        # Save as SRT
+        safe_title = sanitize_filename(title or bvid)
+        filename = f"{safe_title}_danmaku.srt"
+        filepath = os.path.join(output_dir, filename)
+
+        content = self._to_srt(body, safe_title)
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(content)
+
+        return {
+            "success": True,
+            "source": "danmaku",
+            "filepath": filepath,
+            "entries": len(body),
+            "total_danmaku": danmaku_result.get("danmaku_count", len(danmaku_list)),
         }
 
     async def execute(self, action: str, **kwargs) -> Dict[str, Any]:

@@ -54,7 +54,7 @@
     "security_notes": [
       "Credentials are NEVER persisted to disk unless the user explicitly calls save_to_file().",
       "Prefer passing credentials via environment variables or in-memory parameters.",
-"All API requests go to official Bilibili endpoints and YouTube oEmbed API over HTTPS.",
+"All API requests go to official Bilibili endpoints over HTTPS.",
       "Use a test/throwaway Bilibili account for evaluation purposes."
     ]
   },
@@ -64,11 +64,9 @@
       "api.bilibili.com",
       "member.bilibili.com",
       "upos-sz-upcdnbda2.bilivideo.com",
-      "www.bilibili.com",
-      "www.youtube.com"
+      "www.bilibili.com"
     ],
-    "third_party_telemetry": false,
-    "analytics": false
+    "third_party_telemetry    "analytics": false
   },
   "files": [
     "main.py",
@@ -158,7 +156,7 @@
     },
     {
       "name": "bilibili_watcher",
-      "description": "Watch and monitor Bilibili (and YouTube) videos. Track view counts, comments, likes, and other engagement metrics over time.",
+      "description": "Watch and monitor Bilibili videos. Track view counts, comments, likes, and other engagement metrics over time.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -169,7 +167,7 @@
           },
           "url": {
             "type": "string",
-            "description": "Video URL (supports Bilibili and YouTube)"
+            "description": "Video URL (supports Bilibili)"
           },
           "urls": {
             "type": "array",
@@ -345,13 +343,12 @@
   },
   "permissions": {
     "network": {
-      "description": "HTTP/HTTPS requests to Bilibili official APIs and YouTube oEmbed API",
+      "description": "HTTP/HTTPS requests to Bilibili official APIs",
       "allowed_domains": [
         "api.bilibili.com",
         "member.bilibili.com",
         "www.bilibili.com",
-        "upos-sz-upcdnbda2.bilivideo.com",
-        "www.youtube.com"
+        "upos-sz-upcdnbda2.bilivideo.com"
       ]
     },
     "filesystem": {

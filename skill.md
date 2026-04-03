@@ -6,7 +6,7 @@ description: >
   and video publishing capabilities into a single unified skill.
   Supports Bilibili session cookie authentication for publishing and
   high-quality downloads. Requests go to official Bilibili API endpoints
-  and YouTube oEmbed API (for YouTube stats) over HTTPS.
+  over HTTPS.
 version: 1.0.12
 type: code
 implementation: python
@@ -23,7 +23,7 @@ tags:
   - danmaku
   - video-publish
   - video-player
-  - youtube-stats
+
   - batch-download
   - multi-format
 author: wscats
@@ -64,7 +64,7 @@ A comprehensive Bilibili toolkit that integrates hot trending monitoring, video 
 | 下载字幕、转换字幕格式、合并字幕 | 📝 Subtitle | "字幕"、"CC"、"SRT"、"ASS"、"字幕下载"、"字幕转换"、"翻译" |
 | 播放视频、获取弹幕、播放列表 | ▶️ Player | "播放"、"弹幕"、"播放地址"、"分P"、"播放列表"、"danmaku" |
 | 上传视频、发布、定时发布、草稿、编辑、删除 | 📤 Publisher | "上传"、"发布"、"投稿"、"定时发布"、"草稿"、"编辑视频"、"删除视频" |
-| 涉及YouTube视频数据查询 | 👀 Watcher | "YouTube"、"油管"、"YTB"、"YouTube观看量" |
+
 | 提及B站链接或BV号 | 自动识别 | `BV*`、`bilibili.com/video/*`、`b23.tv/*` |
 
 > 💡 **提示**：只要用户消息中包含 B站/Bilibili 相关操作意图，或包含 BV 号、bilibili 链接，本 Skill 即会被自动激活。无需显式声明调用。
@@ -76,7 +76,7 @@ A comprehensive Bilibili toolkit that integrates hot trending monitoring, video 
 |---|---|
 | 🔥 **Hot Monitor** | Monitor Bilibili hot/trending videos and topics in real-time |
 | ⬇️ **Downloader** | Download Bilibili videos with multiple quality and format options |
-| 👀 **Watcher** | Watch and track video engagement metrics (supports Bilibili & YouTube) |
+| 👀 **Watcher** | Watch and track video engagement metrics (supports Bilibili) |
 | 📝 **Subtitle** | Download and process subtitles in multiple formats and languages |
 | ▶️ **Player** | Get playback URLs, danmaku (bullet comments), and playlist info |
 | 📤 **Publisher** | Upload, schedule, edit, and manage videos on Bilibili |
@@ -102,6 +102,7 @@ pip install -r requirements.txt
 - `beautifulsoup4 >= 4.12.0`
 - `lxml >= 4.9.0`
 - `requests >= 2.31.0`
+- `faster-whisper >= 1.0.0` *(optional, for speech recognition subtitle fallback)*
 
 ## Configuration
 
@@ -154,7 +155,7 @@ This skill handles **sensitive Bilibili session cookies**. Please read the follo
 | **What credentials are needed?** | `SESSDATA`, `bili_jct`, `buvid3` — Bilibili browser cookies |
 | **Which features require authentication?** | Publishing (upload/edit/delete/schedule/draft), downloading 1080p+/4K quality videos |
 | **Which features work WITHOUT credentials?** | Hot monitoring, standard-quality downloads, subtitle listing, danmaku fetching, stats viewing |
-| **Where are credentials sent?** | To official Bilibili API endpoints (`api.bilibili.com`, `member.bilibili.com`) over HTTPS. YouTube metadata uses `www.youtube.com/oembed` (no credentials sent) |
+| **Where are credentials sent?** | To official Bilibili API endpoints (`api.bilibili.com`, `member.bilibili.com`) over HTTPS |
 | **Are credentials persisted to disk?** | **NO** — unless you explicitly call `auth.save_to_file()`. Credentials stay in memory by default |
 | **File permissions for saved credentials** | `0600` (owner read/write only) — restrictive by default |
 
@@ -164,7 +165,7 @@ This skill handles **sensitive Bilibili session cookies**. Please read the follo
 2. 🔒 **Prefer in-memory credentials** — Pass credentials via environment variables or direct parameters rather than saving to a file.
 3. 📁 **If you must save credentials** — Use `auth.save_to_file()` which creates files with `0600` permissions. Delete the file when no longer needed.
 4. 🐳 **Run in isolation** — When possible, run this skill in an isolated container/environment and inspect network traffic.
-5. 🌐 **Verify network traffic** — All HTTP requests go to Bilibili's official domains and YouTube oEmbed API only. You can verify by monitoring outbound connections.
+5. 🌐 **Verify network traffic** — All HTTP requests go to Bilibili's official domains only. You can verify by monitoring outbound connections.
 6. ❌ **No exfiltration** — This skill does NOT send credentials to any third-party service, analytics endpoint, or telemetry server.
 
 ### Network Endpoints Used
@@ -175,7 +176,7 @@ This skill handles **sensitive Bilibili session cookies**. Please read the follo
 | `member.bilibili.com` | Video publishing (upload, edit, delete) |
 | `upos-sz-upcdnbda2.bilivideo.com` | Video file upload CDN |
 | `www.bilibili.com` | Web page scraping fallback |
-| `www.youtube.com` | YouTube video metadata via oEmbed API (no auth required) |
+
 
 ### Credential Requirement by Module
 
@@ -306,7 +307,7 @@ result = await app.execute("downloader", "download", url="BV1xx411c7mD", quality
 
 ### 3. 👀 Watcher (`bilibili_watcher`)
 
-Watch and monitor Bilibili (and YouTube) videos. Track view counts, comments, likes, and other engagement metrics over time.
+Watch and monitor Bilibili videos. Track view counts, comments, likes, and other engagement metrics over time.
 
 #### Actions
 
@@ -320,7 +321,6 @@ Watch and monitor Bilibili (and YouTube) videos. Track view counts, comments, li
 #### Supported Platforms
 
 - **Bilibili**: `https://www.bilibili.com/video/BVxxxxxx` or `BVxxxxxx`
-- **YouTube**: `https://www.youtube.com/watch?v=xxxxx` or `https://youtu.be/xxxxx`
 
 #### Examples
 
@@ -340,7 +340,7 @@ python main.py watcher compare '{"urls": ["BV1xx411c7mD", "BV1yy411c8nE"]}'
 
 ```python
 # Python API
-details = await app.execute("watcher", "watch", url="https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+
 comparison = await app.execute("watcher", "compare", urls=["BV1xx411c7mD", "BV1yy411c8nE"])
 ```
 
@@ -350,12 +350,18 @@ comparison = await app.execute("watcher", "compare", urls=["BV1xx411c7mD", "BV1y
 
 Download and process subtitles/CC from Bilibili videos. Supports multiple subtitle formats and languages.
 
+**When no CC subtitles are available**, the module automatically falls back to:
+1. **Speech Recognition** — Downloads the video's audio and transcribes it using `faster-whisper` (requires `pip install faster-whisper`)
+2. **Danmaku Extraction** — Fetches bullet comments from the video as a text reference
+
+Both fallback results are returned together when triggered.
+
 #### Actions
 
 | Action | Description | Parameters |
 |---|---|---|
 | `list` | List available subtitles | `url` |
-| `download` | Download subtitles | `url`, `language`, `format`, `output_dir` |
+| `download` | Download subtitles (with auto-fallback) | `url`, `language`, `format`, `output_dir` |
 | `convert` | Convert subtitle format | `input_path`, `output_format`, `output_dir` |
 | `merge` | Merge multiple subtitle files | `input_paths`, `output_path`, `output_format` |
 
@@ -367,13 +373,34 @@ Download and process subtitles/CC from Bilibili videos. Supports multiple subtit
 
 `zh-CN` (default), `en`, `ja`, and other language codes available on the video.
 
+#### Fallback Strategy
+
+When `download` is called and no CC subtitles exist:
+
+```
+CC Subtitle Available? ──Yes──▶ Download CC subtitle
+        │
+       No
+        │
+        ▼
+┌─────────────────────────────────────┐
+│  Fallback 1: Speech Recognition     │
+│  Download audio → faster-whisper    │
+│  Output: {title}_transcribed.srt    │
+├─────────────────────────────────────┤
+│  Fallback 2: Danmaku Extraction     │
+│  Fetch bullet comments → SRT        │
+│  Output: {title}_danmaku.srt        │
+└─────────────────────────────────────┘
+```
+
 #### Examples
 
 ```bash
 # List available subtitles
 python main.py subtitle list '{"url": "BV1xx411c7mD"}'
 
-# Download Chinese subtitles in SRT format
+# Download Chinese subtitles in SRT format (auto-fallback if no CC)
 python main.py subtitle download '{"url": "BV1xx411c7mD", "language": "zh-CN", "format": "srt"}'
 
 # Download English subtitles in ASS format
@@ -390,6 +417,10 @@ python main.py subtitle merge '{"input_paths": ["part1.srt", "part2.srt"], "outp
 # Python API
 subs = await app.execute("subtitle", "list", url="BV1xx411c7mD")
 result = await app.execute("subtitle", "download", url="BV1xx411c7mD", language="zh-CN", format="srt")
+
+# When no CC subtitles, result includes both fallback outputs:
+# result["transcription"]["filepath"]  → speech recognition SRT
+# result["danmaku"]["filepath"]        → danmaku SRT
 ```
 
 ---
@@ -539,7 +570,7 @@ This skill integrates the functionality of the following individual skills into 
 |---|---|---|
 | bilibili-hot-monitor | [Jacobzwj/bilibili-hot-monitor](https://clawhub.ai/Jacobzwj/bilibili-hot-monitor) | `hot_monitor` |
 | bililidownloader | [caiyundc880518/bililidownloader](https://clawhub.ai/caiyundc880518/bililidownloader) | `downloader` |
-| bilibili-youtube-watcher | [donnycui/bilibili-youtube-watcher](https://clawhub.ai/donnycui/bilibili-youtube-watcher) | `watcher` |
+| bilibili-watcher | [donnycui/bilibili-youtube-watcher](https://clawhub.ai/donnycui/bilibili-youtube-watcher) | `watcher` |
 | bilibili-subtitle-download-skill | [DavinciEvans/bilibili-subtitle-download-skill](https://clawhub.ai/DavinciEvans/bilibili-subtitle-download-skill) | `subtitle` |
 | bilibili-player | [e421083458/bilibili-player](https://clawhub.ai/e421083458/bilibili-player) | `player` |
 | bilibili-video-publish | [Johnnyxu820/bilibili-video-publish](https://clawhub.ai/Johnnyxu820/bilibili-video-publish) | `publisher` |

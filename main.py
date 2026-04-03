@@ -52,8 +52,12 @@ class BilibiliAllInOne:
         self.hot_monitor = HotMonitor(auth=self.auth)
         self.downloader = BilibiliDownloader(auth=self.auth)
         self.watcher = BilibiliWatcher(auth=self.auth)
-        self.subtitle = SubtitleDownloader(auth=self.auth)
         self.player = BilibiliPlayer(auth=self.auth)
+        self.subtitle = SubtitleDownloader(
+            auth=self.auth,
+            downloader=self.downloader,
+            player=self.player,
+        )
         self._publisher = None  # Lazy init (requires auth)
 
     @property

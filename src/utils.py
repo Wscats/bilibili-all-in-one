@@ -216,7 +216,7 @@ def parse_video_url(url: str) -> Dict[str, Any]:
     """Parse a video URL and extract platform and identifier.
 
     Args:
-        url: Video URL (supports Bilibili and YouTube).
+        url: Video URL (supports Bilibili).
 
     Returns:
         Dict with 'platform' and 'id' keys.
@@ -231,19 +231,6 @@ def parse_video_url(url: str) -> Dict[str, Any]:
             "platform": "bilibili",
             "bvid": bvid,
             "aid": aid,
-            "url": url,
-        }
-
-    # YouTube
-    if "youtube.com" in parsed.hostname or "youtu.be" in parsed.hostname:
-        if "youtu.be" in parsed.hostname:
-            video_id = parsed.path.strip("/")
-        else:
-            qs = parse_qs(parsed.query)
-            video_id = qs.get("v", [None])[0]
-        return {
-            "platform": "youtube",
-            "video_id": video_id,
             "url": url,
         }
 

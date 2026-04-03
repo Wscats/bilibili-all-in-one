@@ -21,3 +21,19 @@ credentials.json
 *.mpeg
 *.3gp
 *.ts
+
+# Subtitle files
+*.srt
+subtitles/
+
+# Music/Audio files
+*.mp3
+*.wav
+*.flac
+*.aac
+*.ogg
+*.wma
+*.m4a
+*.aiff
+*.ape
+*.opus

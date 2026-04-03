@@ -1,4 +1,4 @@
-"""Bilibili/YouTube video watching and stats tracking module."""
+"""Bilibili video watching and stats tracking module."""
 
 import asyncio
 import time
@@ -19,7 +19,7 @@ from .utils import (
 
 
 class BilibiliWatcher:
-    """Watch and monitor Bilibili (and YouTube) videos.
+    """Watch and monitor Bilibili videos.
 
     Track view counts, comments, likes, and other engagement metrics over time.
     """
@@ -47,7 +47,7 @@ class BilibiliWatcher:
         """Get detailed video information for watching.
 
         Args:
-            url: Video URL (supports Bilibili and YouTube).
+            url: Video URL (supports Bilibili).
 
         Returns:
             Detailed video information.
@@ -56,8 +56,6 @@ class BilibiliWatcher:
 
         if video_info["platform"] == "bilibili":
             return await self._watch_bilibili(video_info.get("bvid"), url)
-        elif video_info["platform"] == "youtube":
-            return await self._watch_youtube(video_info.get("video_id"), url)
         else:
             return {"success": False, "message": f"Unsupported platform for URL: {url}"}
 
@@ -122,40 +120,6 @@ class BilibiliWatcher:
             "tags": tags,
             "related_videos": related,
             "url": f"https://www.bilibili.com/video/{video.get('bvid')}",
-        }
-
-    async def _watch_youtube(self, video_id: Optional[str], url: str) -> Dict[str, Any]:
-        """Get YouTube video information via oEmbed API.
-
-        Args:
-            video_id: YouTube video ID.
-            url: Original URL.
-
-        Returns:
-            Video details dict.
-        """
-        if not video_id:
-            return {"success": False, "message": f"Cannot extract video ID from: {url}"}
-
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.get(
-                "https://www.youtube.com/oembed",
-                params={"url": f"https://www.youtube.com/watch?v={video_id}", "format": "json"},
-            )
-
-        if resp.status_code != 200:
-            return {"success": False, "message": "Failed to fetch YouTube video info"}
-
-        data = resp.json()
-        return {
-            "success": True,
-            "platform": "youtube",
-            "video_id": video_id,
-            "title": data.get("title"),
-            "author": data.get("author_name"),
-            "author_url": data.get("author_url"),
-            "thumbnail": data.get("thumbnail_url"),
-            "url": f"https://www.youtube.com/watch?v={video_id}",
         }
 
     async def get_stats(self, url: str) -> Dict[str, Any]:

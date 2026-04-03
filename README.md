@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/python-%3E%3D3.8-blue?logo=python&logoColor=white" />
   <img src="https://img.shields.io/badge/license-MIT-green" />
   <img src="https://img.shields.io/badge/version-1.0.9-orange" />
-  <img src="https://img.shields.io/badge/platform-Bilibili%20%7C%20YouTube-pink" />
+  <img src="https://img.shields.io/badge/platform-Bilibili-pink" />
 </p>
 
 ---
@@ -25,7 +25,7 @@
 |:---:|---|:---:|
 | 🔥 **热门监控** | 热门视频、热搜话题、每周必看、分区排行榜 | ❌ |
 | ⬇️ **视频下载** | 多清晰度下载、批量下载、格式转换、音频提取 | ⚠️ 高清需要 |
-| 👀 **数据追踪** | 播放/点赞/收藏统计、数据追踪、多视频对比（支持 YouTube） | ❌ |
+| 👀 **数据追踪** | 播放/点赞/收藏统计、数据追踪、多视频对比 | ❌ |
 | 📝 **字幕提取** | 字幕下载、格式转换（SRT/ASS/VTT/TXT）、多语言、字幕合并 | ❌ |
 | ▶️ **视频播放** | 播放地址获取、弹幕抓取、分P/播放列表信息 | ⚠️ 高清需要 |
 | 📤 **视频发布** | 上传投稿、定时发布、草稿管理、编辑/删除视频 | ✅ 必须 |
@@ -198,7 +198,7 @@ result = await app.execute("downloader", "batch_download", urls=["BV1xx411c7mD",
 
 ### 3. 数据追踪 (`watcher`)
 
-追踪 B站和 YouTube 视频的互动数据，支持多视频对比。
+追踪 B站视频的互动数据，支持多视频对比。
 
 | 操作 | 说明 | 参数 |
 |---|---|---|
@@ -209,7 +209,6 @@ result = await app.execute("downloader", "batch_download", urls=["BV1xx411c7mD",
 
 **支持平台：**
 - **B站**：`https://www.bilibili.com/video/BVxxxxxx` 或 `BVxxxxxx`
-- **YouTube**：`https://www.youtube.com/watch?v=xxxxx` 或 `https://youtu.be/xxxxx`
 
 ```bash
 # 查看视频详情
@@ -223,16 +222,12 @@ python main.py watcher track '{"url": "BV1xx411c7mD", "interval": 30, "duration"
 
 # 对比多个视频
 python main.py watcher compare '{"urls": ["BV1xx411c7mD", "BV1yy411c8nE"]}'
-
-# YouTube 视频也支持
-python main.py watcher watch '{"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"}'
 ```
 
 ```python
 # Python API
 stats = await app.execute("watcher", "get_stats", url="BV1xx411c7mD")
 comparison = await app.execute("watcher", "compare", urls=["BV1xx411c7mD", "BV1yy411c8nE"])
-youtube_info = await app.execute("watcher", "watch", url="https://youtu.be/dQw4w9WgXcQ")
 ```
 
 ---
@@ -402,7 +397,6 @@ result = await app.execute("publisher", "upload",
 | `member.bilibili.com` | 视频发布（上传、编辑、删除） |
 | `upos-sz-upcdnbda2.bilivideo.com` | 视频文件上传 CDN |
 | `www.bilibili.com` | 网页数据抓取备用 |
-| `www.youtube.com` | YouTube 视频元数据获取（oEmbed API，无需认证） |
 
 ### 安全建议
 
@@ -447,7 +441,7 @@ bilibili-all-in-one/
 |---|---|---|
 | bilibili-hot-monitor | [Jacobzwj/bilibili-hot-monitor](https://clawhub.ai/Jacobzwj/bilibili-hot-monitor) | `hot_monitor` |
 | bililidownloader | [caiyundc880518/bililidownloader](https://clawhub.ai/caiyundc880518/bililidownloader) | `downloader` |
-| bilibili-youtube-watcher | [donnycui/bilibili-youtube-watcher](https://clawhub.ai/donnycui/bilibili-youtube-watcher) | `watcher` |
+| bilibili-watcher | [donnycui/bilibili-youtube-watcher](https://clawhub.ai/donnycui/bilibili-youtube-watcher) | `watcher` |
 | bilibili-subtitle-download-skill | [DavinciEvans/bilibili-subtitle-download-skill](https://clawhub.ai/DavinciEvans/bilibili-subtitle-download-skill) | `subtitle` |
 | bilibili-player | [e421083458/bilibili-player](https://clawhub.ai/e421083458/bilibili-player) | `player` |
 | bilibili-video-publish | [Johnnyxu820/bilibili-video-publish](https://clawhub.ai/Johnnyxu820/bilibili-video-publish) | `publisher` |
