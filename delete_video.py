@@ -6,10 +6,10 @@ import threading
 import webbrowser
 import httpx
 
-SESSDATA = "61753541%2C1790685010%2C5984f%2A42CjC5mw19-HHCP1cbPuZBMeL_sAmIgSkElz-E4MLckI-8l-JlAgy3GmvsNwUKt767ID8SVkJIRk1uUVJ6cGNHLW40QTZZcTFkUzVmVUJZZjZmN1puUUV5ajlqbWl1dW1RQmdTSUFQODV3NHFkSUxERUNUbUMzamdJTW1LU2ZGQ01jbUpzczJ6NlBBIIEC"
-BILI_JCT = "aabf47ab2b60548bdae7991e72694e3b"
-BVID = "BV1rM9MBtE9t"
-AID = 116340732002400
+SESSDATA = "your_sessdata_here"
+BILI_JCT = "your_bili_jct_here"
+BVID = "your_bvid_here"
+AID = 0  # your_aid_here
 
 server_should_stop = threading.Event()
 
