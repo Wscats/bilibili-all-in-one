@@ -133,13 +133,14 @@ async def main():
         print("  watcher       - Watch and track video stats")
         print("  subtitle      - Download subtitles")
         print("  player        - Play videos and get danmaku")
-        print("  publisher     - Upload and publish videos")
+        print("  publisher     - Upload, publish, and delete videos")
         print()
         print("Examples:")
         print('  python main.py hot_monitor get_hot \'{"limit": 5}\'')
         print('  python main.py downloader get_info \'{"url": "BV1xx411c7mD"}\'')
         print('  python main.py subtitle list \'{"url": "BV1xx411c7mD"}\'')
         print('  python main.py player get_danmaku \'{"url": "BV1xx411c7mD"}\'')
+        print('  python main.py publisher delete_with_captcha \'{"bvid": "BV1xx411c7mD"}\'')
         sys.exit(1)
 
     skill_name = sys.argv[1]

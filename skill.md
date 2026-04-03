@@ -176,6 +176,11 @@ This skill handles **sensitive Bilibili session cookies**. Please read the follo
 | `member.bilibili.com` | Video publishing (upload, edit, delete) |
 | `upos-sz-upcdnbda2.bilivideo.com` | Video file upload CDN |
 | `www.bilibili.com` | Web page scraping fallback |
+| `passport.bilibili.com` | Geetest captcha challenge for delete verification |
+| `static.geetest.com` | Geetest captcha JS SDK (loaded client-side in browser only) |
+| `127.0.0.1` (local) | Temporary local HTTP server for captcha verification page |
+
+> **Note on `delete_with_captcha`:** This action starts a temporary local HTTP server on `127.0.0.1` and opens a browser page for geetest captcha verification. The geetest JS (`static.geetest.com`) is loaded **client-side in the user's browser only** — it is NOT executed server-side. The local server auto-closes immediately after verification completes. No data is sent to any third party; the captcha result is used locally to confirm the user's intent before calling the official Bilibili delete API.
 
 
 ### Credential Requirement by Module
@@ -489,6 +494,7 @@ Publish videos to Bilibili. Supports uploading videos, setting metadata, schedul
 | `schedule` | Schedule future publication | `file_path`, `title`, `schedule_time`, `description`, `tags`, `category`, `cover_path` |
 | `edit` | Edit existing video metadata | `bvid`, `title`, `description`, `tags`, `cover_path` |
 | `delete` | Delete a video | `bvid` |
+| `delete_with_captcha` | Delete with browser captcha verification | `bvid`, `port`, `auto_open` |
 
 #### Upload Parameters
 
@@ -520,6 +526,9 @@ python main.py publisher edit '{"bvid": "BV1xx411c7mD", "title": "New Title", "t
 
 # Delete a video
 python main.py publisher delete '{"bvid": "BV1xx411c7mD"}'
+
+# Delete with captcha verification (opens browser)
+python main.py publisher delete_with_captcha '{"bvid": "BV1xx411c7mD"}'
 ```
 
 ```python

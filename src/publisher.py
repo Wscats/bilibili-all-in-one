@@ -4,6 +4,9 @@ import os
 import json
 import hashlib
 import asyncio
+import http.server
+import threading
+import webbrowser
 from typing import Optional, Dict, Any, List
 
 import httpx
@@ -21,6 +24,157 @@ EDIT_VIDEO_URL = f"{MEMBER_API_BASE}/x/vu/web/edit"
 DELETE_VIDEO_URL = f"{MEMBER_API_BASE}/x/web/archive/delete"
 DRAFT_ADD_URL = f"{MEMBER_API_BASE}/x/vu/web/draft/add"
 COVER_UPLOAD_URL = f"{MEMBER_API_BASE}/x/vu/web/cover/up"
+CAPTCHA_URL = "https://passport.bilibili.com/x/passport-login/captcha"
+
+
+def _build_captcha_html(bvid: str, title: str) -> str:
+    """Build HTML page with geetest captcha widget for delete confirmation.
+
+    Args:
+        bvid: Video BV ID to display.
+        title: Video title to display.
+
+    Returns:
+        Complete HTML page string.
+    """
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>B站视频删除验证</title>
+    <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f4f5f7; }}
+        .container {{ background: white; padding: 40px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); text-align: center; max-width: 420px; width: 90%; }}
+        h2 {{ color: #333; margin-bottom: 8px; }}
+        p {{ color: #666; margin-bottom: 16px; }}
+        .bvid {{ color: #00a1d6; font-weight: bold; }}
+        .title {{ color: #333; font-size: 14px; }}
+        #captcha-box {{ margin: 20px auto; min-height: 50px; }}
+        #status {{ margin-top: 16px; padding: 12px; border-radius: 8px; display: none; word-break: break-all; }}
+        .success {{ background: #f0fff0; color: #2e8b57; display: block !important; }}
+        .error {{ background: #fff0f0; color: #dc3545; display: block !important; }}
+        .loading {{ background: #f0f8ff; color: #0066cc; display: block !important; }}
+        .info {{ background: #fff8e1; color: #f57c00; display: block !important; }}
+        #retry-btn {{ display: none; margin-top: 12px; padding: 10px 24px; background: #00a1d6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }}
+        #retry-btn:hover {{ background: #00b5e5; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🗑️ 删除B站视频</h2>
+        <p>BVID: <span class="bvid">{bvid}</span></p>
+        <p class="title">{title}</p>
+        <p>请完成下方验证码以确认删除操作</p>
+        <div id="captcha-box"></div>
+        <div id="status"></div>
+        <button id="retry-btn" onclick="initCaptcha()">🔄 重新加载</button>
+    </div>
+
+    <script src="https://static.geetest.com/static/js/gt.0.4.9.js"></script>
+    <script>
+        var statusEl = document.getElementById('status');
+        var retryBtn = document.getElementById('retry-btn');
+
+        function setStatus(msg, cls) {{
+            statusEl.textContent = msg;
+            statusEl.className = cls;
+        }}
+
+        function showRetry() {{
+            retryBtn.style.display = 'inline-block';
+        }}
+
+        function hideRetry() {{
+            retryBtn.style.display = 'none';
+        }}
+
+        function initCaptcha() {{
+            hideRetry();
+            document.getElementById('captcha-box').innerHTML = '';
+            setStatus('正在获取验证码...', 'loading');
+
+            fetch('/captcha-info')
+                .then(function(r) {{ return r.json(); }})
+                .then(function(captchaInfo) {{
+                    if (captchaInfo.error) {{
+                        setStatus('获取验证码失败: ' + captchaInfo.error, 'error');
+                        showRetry();
+                        return;
+                    }}
+
+                    var gt = captchaInfo.geetest.gt;
+                    var challenge = captchaInfo.geetest.challenge;
+
+                    if (typeof initGeetest === 'undefined') {{
+                        setStatus('极验 SDK 加载失败，请检查网络连接后重试', 'error');
+                        showRetry();
+                        return;
+                    }}
+
+                    setStatus('正在加载验证码...', 'loading');
+
+                    initGeetest({{
+                        gt: gt,
+                        challenge: challenge,
+                        offline: false,
+                        new_captcha: true,
+                        product: "popup",
+                        width: "300px"
+                    }}, function(captchaObj) {{
+                        captchaObj.appendTo("#captcha-box");
+
+                        captchaObj.onReady(function() {{
+                            setStatus('验证码已加载，请点击按钮完成验证', 'info');
+                        }});
+
+                        captchaObj.onSuccess(function() {{
+                            var result = captchaObj.getValidate();
+                            if (!result) {{
+                                setStatus('验证结果为空，请重试', 'error');
+                                showRetry();
+                                return;
+                            }}
+                            setStatus('验证通过，正在删除视频...', 'loading');
+
+                            fetch("/delete", {{
+                                method: "POST",
+                                headers: {{ "Content-Type": "application/json" }},
+                                body: JSON.stringify({{ confirmed: true }})
+                            }})
+                            .then(function(r) {{ return r.json(); }})
+                            .then(function(data) {{
+                                if (data.success) {{
+                                    setStatus("✅ " + data.message, "success");
+                                }} else {{
+                                    setStatus("❌ " + data.message, "error");
+                                    showRetry();
+                                }}
+                            }})
+                            .catch(function(err) {{
+                                setStatus("❌ 请求失败: " + err.message, "error");
+                                showRetry();
+                            }});
+                        }});
+
+                        captchaObj.onError(function(e) {{
+                            var msg = '验证码加载出错';
+                            if (e && e.msg) msg += ': ' + e.msg;
+                            if (e && e.desc) msg += ' (' + JSON.stringify(e.desc) + ')';
+                            setStatus(msg, 'error');
+                            showRetry();
+                        }});
+                    }});
+                }})
+                .catch(function(err) {{
+                    setStatus('获取验证码信息失败: ' + err.message, 'error');
+                    showRetry();
+                }});
+        }}
+
+        initCaptcha();
+    </script>
+</body>
+</html>"""
 
 
 class BilibiliPublisher:
@@ -423,11 +577,152 @@ class BilibiliPublisher:
             "message": "Video deleted successfully",
         }
 
+    async def delete_with_captcha(
+        self,
+        bvid: str,
+        port: int = 18923,
+        auto_open: bool = True,
+    ) -> Dict[str, Any]:
+        """Delete a video with geetest captcha verification via browser.
+
+        Launches a local HTTP server that serves a captcha verification page.
+        The user must complete the captcha in their browser to confirm deletion.
+
+        Args:
+            bvid: BV number of the video to delete.
+            port: Local server port (default 18923).
+            auto_open: Whether to automatically open the browser.
+
+        Returns:
+            Deletion result dict.
+        """
+        # Get AID from BVID
+        async with self._get_client() as client:
+            resp = await client.get(
+                f"{API_BASE}/x/web-interface/view",
+                params={"bvid": bvid},
+            )
+            data = resp.json()
+
+        if data.get("code") != 0:
+            return {"success": False, "message": data.get("message", "Video not found")}
+
+        aid = data["data"]["aid"]
+        title = data["data"].get("title", bvid)
+
+        # Run the captcha server in a thread and wait for result
+        result_holder: Dict[str, Any] = {}
+        server_done = threading.Event()
+
+        def run_server():
+            auth = self.auth
+            nonlocal result_holder
+
+            def _get_captcha_info():
+                """Fetch fresh geetest captcha challenge."""
+                r = httpx.get(
+                    CAPTCHA_URL,
+                    cookies=auth.cookies,
+                    headers={"User-Agent": DEFAULT_HEADERS["User-Agent"]},
+                )
+                d = r.json()
+                if d["code"] != 0:
+                    raise Exception(f"Failed to get captcha: {d}")
+                return d["data"]
+
+            def _do_delete():
+                """Execute the actual delete API call."""
+                r = httpx.post(
+                    DELETE_VIDEO_URL,
+                    cookies=auth.cookies,
+                    headers={
+                        "User-Agent": DEFAULT_HEADERS["User-Agent"],
+                        "Referer": "https://member.bilibili.com/",
+                        "Origin": "https://member.bilibili.com",
+                    },
+                    data={"aid": aid, "csrf": auth.csrf},
+                )
+                try:
+                    d = r.json()
+                except Exception:
+                    return {"success": False, "message": f"Response parse error: {r.text[:200]}"}
+                if d.get("code") == 0:
+                    return {"success": True, "bvid": bvid, "aid": aid,
+                            "message": f"Video {bvid} deleted successfully"}
+                return {"success": False,
+                        "message": f"[{d.get('code')}] {d.get('message', 'Delete failed')}"}
+
+            html_content = _build_captcha_html(bvid, title)
+            stop_event = threading.Event()
+
+            class Handler(http.server.BaseHTTPRequestHandler):
+                def do_GET(self_handler):
+                    if self_handler.path == "/captcha-info":
+                        try:
+                            info = _get_captcha_info()
+                            self_handler.send_response(200)
+                            self_handler.send_header("Content-Type", "application/json")
+                            self_handler.send_header("Cache-Control", "no-cache, no-store")
+                            self_handler.end_headers()
+                            self_handler.wfile.write(json.dumps(info).encode())
+                        except Exception as e:
+                            self_handler.send_response(500)
+                            self_handler.send_header("Content-Type", "application/json")
+                            self_handler.end_headers()
+                            self_handler.wfile.write(json.dumps({"error": str(e)}).encode())
+                    else:
+                        self_handler.send_response(200)
+                        self_handler.send_header("Content-Type", "text/html; charset=utf-8")
+                        self_handler.end_headers()
+                        self_handler.wfile.write(html_content.encode())
+
+                def do_POST(self_handler):
+                    if self_handler.path == "/delete":
+                        length = int(self_handler.headers["Content-Length"])
+                        body = json.loads(self_handler.rfile.read(length))
+                        if not body.get("confirmed"):
+                            res = {"success": False, "message": "Deletion not confirmed"}
+                        else:
+                            res = _do_delete()
+                        self_handler.send_response(200)
+                        self_handler.send_header("Content-Type", "application/json")
+                        self_handler.end_headers()
+                        self_handler.wfile.write(json.dumps(res, ensure_ascii=False).encode())
+                        if res.get("success"):
+                            result_holder.update(res)
+                            threading.Timer(1, lambda: stop_event.set()).start()
+
+                def log_message(self_handler, fmt, *args):
+                    pass
+
+            server = http.server.HTTPServer(("127.0.0.1", port), Handler)
+            server.timeout = 1
+
+            if auto_open:
+                webbrowser.open(f"http://127.0.0.1:{port}")
+
+            while not stop_event.is_set():
+                server.handle_request()
+
+            server.server_close()
+            server_done.set()
+
+        thread = threading.Thread(target=run_server, daemon=True)
+        thread.start()
+
+        # Wait for the server to finish (user completes captcha or closes)
+        await asyncio.get_event_loop().run_in_executor(None, server_done.wait)
+
+        if result_holder:
+            return result_holder
+        return {"success": False, "message": "Captcha verification was not completed"}
+
     async def execute(self, action: str, **kwargs) -> Dict[str, Any]:
         """Execute a publisher action.
 
         Args:
-            action: Action name ('upload', 'draft', 'schedule', 'edit', 'delete').
+            action: Action name ('upload', 'draft', 'schedule', 'edit', 'delete',
+                    'delete_with_captcha').
             **kwargs: Additional parameters for the action.
 
         Returns:
@@ -439,6 +734,7 @@ class BilibiliPublisher:
             "schedule": self.schedule,
             "edit": self.edit,
             "delete": self.delete,
+            "delete_with_captcha": self.delete_with_captcha,
         }
 
         handler = actions.get(action)
@@ -640,6 +936,29 @@ class BilibiliPublisher:
             "success": True,
             "url": data.get("data", {}).get("url", ""),
         }
+
+    @staticmethod
+    def _get_captcha_info_sync(cookies: Dict[str, str]) -> Dict[str, Any]:
+        """Get geetest captcha challenge from Bilibili (synchronous).
+
+        Args:
+            cookies: Authentication cookies.
+
+        Returns:
+            Captcha challenge data.
+
+        Raises:
+            Exception: If captcha request fails.
+        """
+        resp = httpx.get(
+            CAPTCHA_URL,
+            cookies=cookies,
+            headers={"User-Agent": DEFAULT_HEADERS["User-Agent"]},
+        )
+        data = resp.json()
+        if data["code"] != 0:
+            raise Exception(f"Failed to get captcha: {data}")
+        return data["data"]
 
     async def _submit_video(
         self,

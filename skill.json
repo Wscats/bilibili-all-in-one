@@ -64,9 +64,13 @@
       "api.bilibili.com",
       "member.bilibili.com",
       "upos-sz-upcdnbda2.bilivideo.com",
-      "www.bilibili.com"
+      "www.bilibili.com",
+      "passport.bilibili.com",
+      "static.geetest.com"
     ],
-    "third_party_telemetry    "analytics": false
+    "third_party_telemetry": false,
+    "analytics": false,
+    "local_server_note": "The delete_with_captcha action starts a temporary local HTTP server (127.0.0.1) for geetest captcha verification. The server auto-closes after verification. The geetest JS (static.geetest.com) is loaded client-side in the browser only."
   },
   "files": [
     "main.py",
@@ -85,7 +89,8 @@
     "src/watcher.py",
     "src/publisher.py",
     "tests/__init__.py",
-    "tests/test_all_skill_examples.py"
+    "tests/test_all_skill_examples.py",
+    "tests/test_comprehensive.py"
   ],
   "skills": [
     {
@@ -266,8 +271,8 @@
         "properties": {
           "action": {
             "type": "string",
-            "enum": ["upload", "draft", "schedule", "edit", "delete"],
-            "description": "The action to perform: upload (upload and publish), draft (save as draft), schedule (schedule publication), edit (edit existing video), delete (delete a video)"
+            "enum": ["upload", "draft", "schedule", "edit", "delete", "delete_with_captcha"],
+            "description": "The action to perform: upload (upload and publish), draft (save as draft), schedule (schedule publication), edit (edit existing video), delete (delete a video), delete_with_captcha (delete with browser captcha verification)"
           },
           "file_path": {
             "type": "string",
@@ -345,10 +350,12 @@
     "network": {
       "description": "HTTP/HTTPS requests to Bilibili official APIs",
       "allowed_domains": [
-        "api.bilibili.com",
+      "api.bilibili.com",
         "member.bilibili.com",
         "www.bilibili.com",
-        "upos-sz-upcdnbda2.bilivideo.com"
+        "upos-sz-upcdnbda2.bilivideo.com",
+        "passport.bilibili.com",
+        "static.geetest.com"
       ]
     },
     "filesystem": {
