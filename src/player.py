@@ -1,8 +1,6 @@
 """Bilibili video playback and danmaku module."""
 
 import asyncio
-import struct
-import zlib
 from typing import Optional, Dict, Any, List
 
 import httpx

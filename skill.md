@@ -7,7 +7,7 @@ description: >
   Supports Bilibili session cookie authentication for publishing and
   high-quality downloads. Requests go to official Bilibili API endpoints
   over HTTPS.
-version: 1.0.17
+version: 1.0.18
 type: code
 implementation: python
 interface: cli-and-api
@@ -31,10 +31,10 @@ license: MIT
 homepage: https://github.com/wscats/bilibili-all-in-one
 repository: https://github.com/wscats/bilibili-all-in-one
 entry_point: main.py
-required_env_vars:
+required_env_vars: []
+optional_env_vars:
   - BILIBILI_SESSDATA
   - BILIBILI_BILI_JCT
-optional_env_vars:
   - BILIBILI_BUVID3
 install: pip install -r requirements.txt
 ---
@@ -43,9 +43,9 @@ install: pip install -r requirements.txt
 
 A comprehensive Bilibili toolkit that integrates hot trending monitoring, video downloading, video watching/playback, subtitle downloading, and video publishing capabilities into a single unified skill.
 
-> **⚠️ Required Environment Variables:** `BILIBILI_SESSDATA`, `BILIBILI_BILI_JCT` (required), `BILIBILI_BUVID3` (optional)
-> These are sensitive Bilibili session cookies needed for authenticated operations (publishing, high-quality downloads).
-> Features that do NOT require authentication: hot monitoring, standard-quality downloads, subtitle listing, danmaku, stats viewing.
+> **⚠️ Optional Environment Variables:** `BILIBILI_SESSDATA`, `BILIBILI_BILI_JCT` (optional), `BILIBILI_BUVID3` (optional)
+> These are sensitive Bilibili session cookies needed **only** for publishing and high-quality (1080p+/4K) downloads.
+> **Most features work WITHOUT any credentials:** hot monitoring, standard-quality downloads, subtitle listing, danmaku, stats viewing.
 >
 > **📦 Install:** `pip install -r requirements.txt` (all standard PyPI packages: httpx, aiohttp, beautifulsoup4, lxml, requests)
 >
@@ -54,7 +54,7 @@ A comprehensive Bilibili toolkit that integrates hot trending monitoring, video 
 ---
 ### 何时激活
 
-当用户说出或暗示以下内容时，本 Skill 会被激活：
+当用户**明确请求**以下 Bilibili 相关操作时，本 Skill 可被激活：
 
 | 触发场景 | 匹配的模块 | 典型触发词 |
 |---|---|---|
@@ -65,9 +65,7 @@ A comprehensive Bilibili toolkit that integrates hot trending monitoring, video 
 | 播放视频、获取弹幕、播放列表 | ▶️ Player | "播放"、"弹幕"、"播放地址"、"分P"、"播放列表"、"danmaku" |
 | 上传视频、发布、定时发布、草稿、编辑 | 📤 Publisher | "上传"、"发布"、"投稿"、"定时发布"、"草稿"、"编辑视频" |
 
-| 提及B站链接或BV号 | 自动识别 | `BV*`、`bilibili.com/video/*`、`b23.tv/*` |
-
-> 💡 **提示**：只要用户消息中包含 B站/Bilibili 相关操作意图，或包含 BV 号、bilibili 链接，本 Skill 即会被自动激活。无需显式声明调用。
+> ⚠️ **注意**：本 Skill 不会仅因消息中出现 Bilibili 链接或 BV 号就自动激活。只有当用户明确表达了操作意图（如"下载这个视频"、"查看热门"等）时才会被调用。涉及写操作（发布/编辑）时，需要用户显式提供凭证。
 
 ---
 
@@ -154,7 +152,7 @@ This skill handles **sensitive Bilibili session cookies**. Please read the follo
 | **What credentials are needed?** | `SESSDATA`, `bili_jct`, `buvid3` — Bilibili **full browser session cookies** (not limited API keys). Providing them grants broad access to your Bilibili account. |
 | **Which features require authentication?** | Publishing (upload/edit/schedule/draft), downloading 1080p+/4K quality videos |
 | **Which features work WITHOUT credentials?** | Hot monitoring, standard-quality downloads, subtitle listing, danmaku fetching, stats viewing |
-| **Where are credentials sent?** | To official Bilibili API endpoints (`api.bilibili.com`, `member.bilibili.com`, `passport.bilibili.com`) over HTTPS only |
+| **Where are credentials sent?** | To official Bilibili API endpoints (`api.bilibili.com`, `member.bilibili.com`) over HTTPS only |
 | **Are credentials persisted to disk?** | **NO** — unless you explicitly call `auth.save_to_file()`. Credentials stay in memory by default |
 | **File permissions for saved credentials** | `0600` (owner read/write only) — restrictive by default |
 
@@ -176,7 +174,6 @@ This skill handles **sensitive Bilibili session cookies**. Please read the follo
 | `member.bilibili.com` | Video publishing (upload, edit) |
 | `upos-sz-upcdnbda2.bilivideo.com` | Video file upload CDN |
 | `www.bilibili.com` | Web page scraping fallback |
-| `passport.bilibili.com` | Authentication verification |
 
 
 
@@ -556,8 +553,6 @@ bilibili-all-in-one/
 │   ├── player.py           # Video playback & danmaku
 │   └── publisher.py        # Video uploading & publishing
 └── tests/
-    ├── __init__.py
-    └── test_all_skill_examples.py  # Comprehensive unit tests
 ```
 
 ## Skill Origin

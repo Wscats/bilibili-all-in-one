@@ -139,8 +139,7 @@ async def main():
         print('  python main.py hot_monitor get_hot \'{"limit": 5}\'')
         print('  python main.py downloader get_info \'{"url": "BV1xx411c7mD"}\'')
         print('  python main.py subtitle list \'{"url": "BV1xx411c7mD"}\'')
-        print('  python main.py subtitle list \'{"url": "BV1xx411c7mD"}\'')        sys.exit(1)
-
+        print('  python main.py player get_danmaku \'{"url": "BV1xx411c7mD"}\'')
     skill_name = sys.argv[1]
     action = sys.argv[2]
     params = json.loads(sys.argv[3]) if len(sys.argv) > 3 else {}

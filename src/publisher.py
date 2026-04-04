@@ -2,28 +2,23 @@
 
 import os
 import json
-import hashlib
 import asyncio
 from typing import Optional, Dict, Any, List
 import logging
 
-
 import httpx
 
 from .auth import BilibiliAuth
-from .utils import DEFAULT_HEADERS, API_BASE, ensure_dir
+from .utils import DEFAULT_HEADERS, API_BASE
 
 _logger = logging.getLogger("bilibili.publisher")
 
 
 # Publishing API endpoints
 PREUPLOAD_URL = "https://member.bilibili.com/preupload"
-UPLOAD_URL = "https://upos-sz-upcdnbda2.bilivideo.com"
 MEMBER_API_BASE = "https://member.bilibili.com"
 ADD_VIDEO_URL = f"{MEMBER_API_BASE}/x/vu/web/add"
 EDIT_VIDEO_URL = f"{MEMBER_API_BASE}/x/vu/web/edit"
-
-DRAFT_ADD_URL = f"{MEMBER_API_BASE}/x/vu/web/draft/add"
 COVER_UPLOAD_URL = f"{MEMBER_API_BASE}/x/vu/web/cover/up"
 
 

@@ -1,7 +1,7 @@
 {
   "name": "bilibili-all-in-one",
   "description": "A comprehensive Bilibili toolkit that integrates hot trending monitoring, video downloading, video watching/playback, subtitle downloading, and video publishing capabilities into a single skill.",
-"version": "1.0.17",
+"version": "1.0.18",
   "author": "wscats",
   "license": "MIT",
   "homepage": "https://github.com/wscats/bilibili-all-in-one",
@@ -10,8 +10,8 @@
   "type": "code",
   "runtime": "python>=3.8",
   "entry_point": "main.py",
-  "required_env_vars": ["BILIBILI_SESSDATA", "BILIBILI_BILI_JCT"],
-  "optional_env_vars": ["BILIBILI_BUVID3"],
+  "required_env_vars": [],
+  "optional_env_vars": ["BILIBILI_SESSDATA", "BILIBILI_BILI_JCT", "BILIBILI_BUVID3"],
   "install": {
     "type": "pip",
     "command": "pip install -r requirements.txt",
@@ -28,15 +28,15 @@
     {
       "name": "BILIBILI_SESSDATA",
       "type": "string",
-      "description": "Bilibili SESSDATA cookie for authenticated API access (publishing, high-quality downloads).",
-      "required": true,
+      "description": "Bilibili SESSDATA cookie for authenticated API access. Only required for publishing and high-quality (1080p+/4K) downloads. Most features work without this.",
+      "required": false,
       "sensitive": true
     },
     {
       "name": "BILIBILI_BILI_JCT",
       "type": "string",
-      "description": "Bilibili bili_jct cookie (CSRF token) for all write operations (upload, edit).",
-      "required": true,
+      "description": "Bilibili bili_jct cookie (CSRF token) for write operations (upload, edit). Only required for publishing. Most features work without this.",
+      "required": false,
       "sensitive": true
     },
     {
@@ -50,6 +50,7 @@
   "credentials": {
     "primary_credential": "BILIBILI_SESSDATA",
     "credential_type": "full_session_cookies",
+    "credential_required_for": "Only the Publisher module (upload/edit/schedule/draft) and high-quality downloads (1080p+/4K) require credentials. All other features (hot monitoring, standard downloads, subtitles, danmaku, stats) work WITHOUT any credentials.",
     "credential_scope_warning": "These are full browser session cookies (not limited API keys). Providing them grants the skill broad access to your Bilibili account. Use a test/throwaway account.",
     "storage": "in-memory by default; disk persistence only via explicit auth.save_to_file() call with 0600 permissions",
     "security_notes": [
@@ -69,8 +70,7 @@
         "www.bilibili.com"
     ],
     "third_party_telemetry": false,
-    "analytics": false,
-    "local_server_note": ""
+    "analytics": false
   },
   "files": [
     "main.py",
@@ -319,19 +319,19 @@
   "configuration": {
     "bilibili_sessdata": {
       "type": "string",
-      "description": "Bilibili SESSDATA cookie for authenticated operations",
+      "description": "Bilibili SESSDATA cookie. Optional — only needed for publishing and 1080p+/4K downloads. Most features work without credentials.",
       "required": false,
       "sensitive": true
     },
     "bilibili_bili_jct": {
       "type": "string",
-      "description": "Bilibili bili_jct cookie for CSRF protection",
+      "description": "Bilibili bili_jct cookie (CSRF token). Optional — only needed for publishing (upload/edit). Most features work without credentials.",
       "required": false,
       "sensitive": true
     },
     "bilibili_buvid3": {
       "type": "string",
-      "description": "Bilibili buvid3 cookie for device identification",
+      "description": "Bilibili buvid3 cookie for device identification. Optional.",
       "required": false,
       "sensitive": true
     },
@@ -363,5 +363,6 @@
     }
   },
   "always": false,
+  "activation_note": "This skill should only be activated when the user explicitly requests Bilibili-related operations. It does NOT auto-activate on keyword/link detection.",
   "disable_model_invocation": false
 }
