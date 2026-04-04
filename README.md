@@ -95,6 +95,31 @@ app = BilibiliAllInOne(
 )
 ```
 
+### 方式四：持久化存储（可选）
+
+默认情况下，凭据仅保存在内存中，不会写入磁盘。如需跨会话自动保存/加载凭据：
+
+```bash
+# 通过环境变量启用
+export BILIBILI_PERSIST=1
+```
+
+```python
+# 或通过代码启用
+app = BilibiliAllInOne(persist=True)
+
+# 运行时切换：启用持久化
+app.auth.persist = True
+
+# 运行时切换：关闭持久化并删除文件
+app.auth.persist = False
+
+# 手动删除持久化文件
+app.auth.clear_persisted()
+```
+
+启用后，凭据自动保存到项目根目录的 `.credentials.json`（权限 `0600`，仅所有者可读写），下次启动时自动加载。
+
 > 💡 **如何获取 Cookie？** 登录 [bilibili.com](https://www.bilibili.com) → 按 F12 打开开发者工具 → Application → Cookies → 复制 `SESSDATA`、`bili_jct`、`buvid3` 的值。
 
 ---

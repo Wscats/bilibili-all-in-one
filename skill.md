@@ -36,6 +36,7 @@ optional_env_vars:
   - BILIBILI_SESSDATA
   - BILIBILI_BILI_JCT
   - BILIBILI_BUVID3
+  - BILIBILI_PERSIST
 install: pip install -r requirements.txt
 ---
 
@@ -43,7 +44,7 @@ install: pip install -r requirements.txt
 
 A comprehensive Bilibili toolkit that integrates hot trending monitoring, video downloading, video watching/playback, subtitle downloading, and video publishing capabilities into a single unified skill.
 
-> **⚠️ Optional Environment Variables:** `BILIBILI_SESSDATA`, `BILIBILI_BILI_JCT` (optional), `BILIBILI_BUVID3` (optional)
+> **⚠️ Optional Environment Variables:** `BILIBILI_SESSDATA`, `BILIBILI_BILI_JCT` (optional), `BILIBILI_BUVID3` (optional), `BILIBILI_PERSIST` (optional)
 > These are sensitive Bilibili session cookies needed **only** for publishing and high-quality (1080p+/4K) downloads.
 > **Most features work WITHOUT any credentials:** hot monitoring, standard-quality downloads, subtitle listing, danmaku, stats viewing.
 >
@@ -139,6 +140,26 @@ app = BilibiliAllInOne(
 )
 ```
 
+### 4. Persistent Storage (Optional)
+
+By default, credentials are kept **in-memory only** and are not saved to disk. To enable automatic persistence across sessions:
+
+```bash
+# Via environment variable
+export BILIBILI_PERSIST=1
+```
+
+```python
+# Or via code
+app = BilibiliAllInOne(persist=True)
+```
+
+When persistence is enabled:
+- Credentials are auto-saved to `.credentials.json` (with `0600` permissions) after initialization
+- On next startup, credentials are auto-loaded from this file
+- You can toggle persistence at runtime: `app.auth.persist = True` / `app.auth.persist = False`
+- To delete the persisted file: `app.auth.clear_persisted()`
+
 > **How to get cookies:** Log in to [bilibili.com](https://www.bilibili.com), open browser DevTools (F12) → Application → Cookies, and copy the values of `SESSDATA`, `bili_jct`, and `buvid3`.
 
 ## ⚠️ Security & Privacy
@@ -153,14 +174,14 @@ This skill handles **sensitive Bilibili session cookies**. Please read the follo
 | **Which features require authentication?** | Publishing (upload/edit/schedule/draft), downloading 1080p+/4K quality videos |
 | **Which features work WITHOUT credentials?** | Hot monitoring, standard-quality downloads, subtitle listing, danmaku fetching, stats viewing |
 | **Where are credentials sent?** | To official Bilibili API endpoints (`api.bilibili.com`, `member.bilibili.com`) over HTTPS only |
-| **Are credentials persisted to disk?** | **NO** — unless you explicitly call `auth.save_to_file()`. Credentials stay in memory by default |
+| **Are credentials persisted to disk?** | **NO** by default — credentials stay in memory. Set `persist=True` or `BILIBILI_PERSIST=1` to opt-in to automatic persistence (saved to `.credentials.json` with `0600` permissions). You can also manually call `auth.save_to_file()` |
 | **File permissions for saved credentials** | `0600` (owner read/write only) — restrictive by default |
 
 ### Best Practices
 
 1. 🧪 **Use a test account** — Do NOT provide your primary Bilibili account cookies for evaluation/testing purposes. These are **full session cookies** that grant broad account access (not limited API keys).
-2. 🔒 **Prefer in-memory credentials** — Pass credentials via environment variables or direct parameters rather than saving to a file.
-3. 📁 **If you must save credentials** — Use `auth.save_to_file()` which creates files with `0600` permissions. Delete the file when no longer needed.
+2. 🔒 **Prefer in-memory credentials** — Pass credentials via environment variables or direct parameters rather than saving to a file. Only enable `persist=True` if you need credentials to survive across sessions.
+3. 📁 **If you enable persistence** — Credentials are saved with `0600` permissions. Use `auth.clear_persisted()` or `auth.persist = False` to remove the file when no longer needed.
 4. 🐳 **Run in isolation** — When possible, run this skill in an isolated container/environment and inspect network traffic.
 5. 🌐 **Verify network traffic** — All HTTP requests go to Bilibili's official domains only. You can verify by monitoring outbound connections.
 6. ❌ **No exfiltration** — This skill does NOT send credentials to any third-party service, analytics endpoint, or telemetry server.

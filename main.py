@@ -32,6 +32,7 @@ class BilibiliAllInOne:
         bili_jct: Optional[str] = None,
         buvid3: Optional[str] = None,
         credential_file: Optional[str] = None,
+        persist: Optional[bool] = None,
     ):
         """Initialize BilibiliAllInOne.
 
@@ -40,12 +41,16 @@ class BilibiliAllInOne:
             bili_jct: Bilibili bili_jct (CSRF) cookie.
             buvid3: Bilibili buvid3 cookie.
             credential_file: Path to JSON credential file.
+            persist: Whether to persist credentials to disk (default: False).
+                Set to True or env BILIBILI_PERSIST=1 to auto-save/load
+                credentials from .credentials.json.
         """
         self.auth = BilibiliAuth(
             sessdata=sessdata,
             bili_jct=bili_jct,
             buvid3=buvid3,
             credential_file=credential_file,
+            persist=persist,
         )
 
         # Initialize all modules

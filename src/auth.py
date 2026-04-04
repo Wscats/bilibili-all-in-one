@@ -8,11 +8,18 @@ import httpx
 
 from .utils import DEFAULT_HEADERS, API_BASE
 
+# Default path for persisted credentials (relative to project root)
+DEFAULT_CREDENTIAL_FILE = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    ".credentials.json",
+)
+
 
 class BilibiliAuth:
     """Manage Bilibili authentication credentials and cookies.
 
     Supports login via SESSDATA cookie, QR code, and credential file.
+    Credentials can optionally be persisted to disk for reuse across sessions.
     """
 
     def __init__(
@@ -21,21 +28,44 @@ class BilibiliAuth:
         bili_jct: Optional[str] = None,
         buvid3: Optional[str] = None,
         credential_file: Optional[str] = None,
+        persist: Optional[bool] = None,
     ):
         """Initialize BilibiliAuth.
+
+        Credential resolution order (highest priority first):
+        1. Explicit parameters (sessdata, bili_jct, buvid3)
+        2. credential_file (JSON file)
+        3. Persisted credential file (~/.credentials.json) if persist=True
+        4. Environment variables (BILIBILI_SESSDATA, etc.)
 
         Args:
             sessdata: SESSDATA cookie value.
             bili_jct: bili_jct cookie value (CSRF token).
             buvid3: buvid3 cookie value.
             credential_file: Path to a JSON file containing credentials.
+            persist: Whether to persist credentials to disk.
+                True  = auto-load from and auto-save to the default credential file.
+                False = never persist (in-memory only).
+                None  = check BILIBILI_PERSIST env var, default to False.
         """
+        # Resolve persist flag
+        if persist is None:
+            persist = os.environ.get("BILIBILI_PERSIST", "").lower() in (
+                "1", "true", "yes",
+            )
+        self._persist = persist
+        self._credential_path = credential_file or DEFAULT_CREDENTIAL_FILE
+
         self.sessdata = sessdata
         self.bili_jct = bili_jct
         self.buvid3 = buvid3
 
+        # Load from explicit credential file
         if credential_file and os.path.exists(credential_file):
             self._load_from_file(credential_file)
+        # Auto-load from default persisted file when persist is enabled
+        elif self._persist and os.path.exists(self._credential_path):
+            self._load_from_file(self._credential_path)
 
         # Try environment variables as fallback
         if not self.sessdata:
@@ -44,6 +74,10 @@ class BilibiliAuth:
             self.bili_jct = os.environ.get("BILIBILI_BILI_JCT", "")
         if not self.buvid3:
             self.buvid3 = os.environ.get("BILIBILI_BUVID3", "")
+
+        # Auto-save if persist is enabled and we have valid credentials
+        if self._persist and self.is_authenticated:
+            self.save_to_file(self._credential_path)
 
     def _load_from_file(self, filepath: str) -> None:
         """Load credentials from a JSON file.
@@ -130,17 +164,40 @@ class BilibiliAuth:
             }
         return {"success": False, "message": data.get("message", "Unknown error")}
 
-    def save_to_file(self, filepath: str) -> None:
+    @property
+    def persist(self) -> bool:
+        """Whether credential persistence is enabled."""
+        return self._persist
+
+    @persist.setter
+    def persist(self, value: bool) -> None:
+        """Enable or disable credential persistence.
+
+        When enabling, credentials are immediately saved to disk.
+        When disabling, the persisted file is deleted if it exists.
+        """
+        self._persist = value
+        if value and self.is_authenticated:
+            self.save_to_file(self._credential_path)
+        elif not value and os.path.exists(self._credential_path):
+            os.remove(self._credential_path)
+
+    def clear_persisted(self) -> None:
+        """Delete the persisted credential file from disk."""
+        if os.path.exists(self._credential_path):
+            os.remove(self._credential_path)
+
+    def save_to_file(self, filepath: Optional[str] = None) -> None:
         """Save current credentials to a JSON file.
 
-        WARNING: This persists sensitive session cookies to disk. Only call this
-        method when explicitly requested by the user. The file is created with
-        restrictive permissions (owner read/write only, 0600) to minimize
-        exposure risk.
+        The file is created with restrictive permissions (owner read/write
+        only, 0600) to minimize exposure risk.
 
         Args:
             filepath: Path to save the credential file.
+                      Defaults to the configured credential path.
         """
+        filepath = filepath or self._credential_path
         cred = {
             "sessdata": self.sessdata,
             "bili_jct": self.bili_jct,

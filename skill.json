@@ -11,7 +11,7 @@
   "runtime": "python>=3.8",
   "entry_point": "main.py",
   "required_env_vars": [],
-  "optional_env_vars": ["BILIBILI_SESSDATA", "BILIBILI_BILI_JCT", "BILIBILI_BUVID3"],
+"optional_env_vars": ["BILIBILI_SESSDATA", "BILIBILI_BILI_JCT", "BILIBILI_BUVID3", "BILIBILI_PERSIST"],
   "install": {
     "type": "pip",
     "command": "pip install -r requirements.txt",
@@ -45,6 +45,13 @@
       "description": "Bilibili buvid3 cookie for device identification in authenticated sessions.",
       "required": false,
       "sensitive": true
+    },
+    {
+      "name": "BILIBILI_PERSIST",
+      "type": "string",
+      "description": "Set to '1', 'true', or 'yes' to enable automatic credential persistence. When enabled, credentials are saved to .credentials.json (0600 permissions) and auto-loaded on next startup. Default: disabled (in-memory only).",
+      "required": false,
+      "sensitive": false
     }
   ],
   "credentials": {
@@ -52,9 +59,9 @@
     "credential_type": "full_session_cookies",
     "credential_required_for": "Only the Publisher module (upload/edit/schedule/draft) and high-quality downloads (1080p+/4K) require credentials. All other features (hot monitoring, standard downloads, subtitles, danmaku, stats) work WITHOUT any credentials.",
     "credential_scope_warning": "These are full browser session cookies (not limited API keys). Providing them grants the skill broad access to your Bilibili account. Use a test/throwaway account.",
-    "storage": "in-memory by default; disk persistence only via explicit auth.save_to_file() call with 0600 permissions",
+"storage": "in-memory by default. Set persist=True (or env BILIBILI_PERSIST=1) to auto-save/load credentials from .credentials.json with 0600 permissions. Persistence can also be toggled at runtime via auth.persist property.",
     "security_notes": [
-      "Credentials are NEVER persisted to disk unless the user explicitly calls save_to_file().",
+      "Credentials are NOT persisted to disk by default. Persistence must be explicitly opted-in via persist=True or BILIBILI_PERSIST=1.",
       "Prefer passing credentials via environment variables or in-memory parameters.",
       "All API requests go to official Bilibili endpoints over HTTPS.",
       "Use a test/throwaway Bilibili account for evaluation purposes.",
