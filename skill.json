@@ -87,10 +87,7 @@
     "src/player.py",
     "src/subtitle.py",
     "src/watcher.py",
-    "src/publisher.py",
-    "tests/__init__.py",
-    "tests/test_all_skill_examples.py",
-    "tests/test_comprehensive.py"
+    "src/publisher.py"
   ],
   "skills": [
     {

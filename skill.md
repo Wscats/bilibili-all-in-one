@@ -175,8 +175,6 @@ This skill handles **sensitive Bilibili session cookies**. Please read the follo
 | `upos-sz-upcdnbda2.bilivideo.com` | Video file upload CDN |
 | `www.bilibili.com` | Web page scraping fallback |
 
-
-
 ### Credential Requirement by Module
 
 | Module | Auth Required? | Notes |
@@ -486,7 +484,7 @@ Publish videos to Bilibili. Supports uploading videos, setting metadata, schedul
 | `upload` | Upload and publish a video | `file_path`, `title`, `description`, `tags`, `category`, `cover_path`, `dynamic`, `no_reprint`, `open_elec` |
 | `draft` | Save as draft | `file_path`, `title`, `description`, `tags`, `category`, `cover_path` |
 | `schedule` | Schedule future publication | `file_path`, `title`, `schedule_time`, `description`, `tags`, `category`, `cover_path` |
-| `edit` | Edit existing video metadata | `bvid`, `title`, `description`, `tags`, `cover_path` |
+| `edit` | Edit existing video metadata | `bvid`, `file_path`, `title`, `description`, `tags`, `cover_path` |
 
 #### Upload Parameters
 
@@ -513,8 +511,8 @@ python main.py publisher draft '{"file_path": "./video.mp4", "title": "Draft Vid
 # Schedule publication
 python main.py publisher schedule '{"file_path": "./video.mp4", "title": "Scheduled Video", "schedule_time": "2025-12-31T20:00:00+08:00"}'
 
-# Edit video metadata
-python main.py publisher edit '{"bvid": "BV1xx411c7mD", "title": "New Title", "tags": ["updated"]}'
+# Edit video metadata (requires re-uploading the video file)
+python main.py publisher edit '{"bvid": "BV1xx411c7mD", "file_path": "./video.mp4", "title": "New Title", "tags": ["updated"]}'
 ```
 
 ```python
@@ -526,6 +524,14 @@ result = await app.execute("publisher", "upload",
     title="My Video",
     description="Published via bilibili-all-in-one",
     tags=["python", "bilibili"],
+)
+
+# Edit video (requires file_path for re-upload)
+result = await app.execute("publisher", "edit",
+    bvid="BV1xx411c7mD",
+    file_path="./video.mp4",
+    title="New Title",
+    tags=["updated"],
 )
 ```
 
@@ -542,31 +548,17 @@ bilibili-all-in-one/
 ├── requirements.txt        # Python dependencies
 ├── .gitignore              # Git ignore rules
 ├── main.py                 # Entry point & unified BilibiliAllInOne class
-├── src/
-│   ├── __init__.py         # Package exports
-│   ├── auth.py             # Authentication & credential management
-│   ├── utils.py            # Shared utilities, API constants, helpers
-│   ├── hot_monitor.py      # Hot/trending video monitoring
-│   ├── downloader.py       # Video downloading
-│   ├── watcher.py          # Video watching & stats tracking
-│   ├── subtitle.py         # Subtitle downloading & processing
-│   ├── player.py           # Video playback & danmaku
-│   └── publisher.py        # Video uploading & publishing
-└── tests/
+└── src/
+    ├── __init__.py         # Package exports
+    ├── auth.py             # Authentication & credential management
+    ├── utils.py            # Shared utilities, API constants, helpers
+    ├── hot_monitor.py      # Hot/trending video monitoring
+    ├── downloader.py       # Video downloading
+    ├── watcher.py          # Video watching & stats tracking
+    ├── subtitle.py         # Subtitle downloading & processing
+    ├── player.py           # Video playback & danmaku
+    └── publisher.py        # Video uploading & publishing
 ```
-
-## Skill Origin
-
-This skill integrates the functionality of the following individual skills into one unified toolkit:
-
-| Original Skill | Source | Integrated Module |
-|---|---|---|
-| bilibili-hot-monitor | [Jacobzwj/bilibili-hot-monitor](https://clawhub.ai/Jacobzwj/bilibili-hot-monitor) | `hot_monitor` |
-| bililidownloader | [caiyundc880518/bililidownloader](https://clawhub.ai/caiyundc880518/bililidownloader) | `downloader` |
-| bilibili-watcher | [donnycui/bilibili-youtube-watcher](https://clawhub.ai/donnycui/bilibili-youtube-watcher) | `watcher` |
-| bilibili-subtitle-download-skill | [DavinciEvans/bilibili-subtitle-download-skill](https://clawhub.ai/DavinciEvans/bilibili-subtitle-download-skill) | `subtitle` |
-| bilibili-player | [e421083458/bilibili-player](https://clawhub.ai/e421083458/bilibili-player) | `player` |
-| bilibili-video-publish | [Johnnyxu820/bilibili-video-publish](https://clawhub.ai/Johnnyxu820/bilibili-video-publish) | `publisher` |
 
 ## Response Format
 
