@@ -150,9 +150,18 @@ class BilibiliAuth:
 
         # Open with restrictive permissions (0600 = owner read/write only)
         fd = os.open(filepath, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        # os.fdopen takes ownership of fd and will close it automatically,
+        # so we must NOT call os.close(fd) after os.fdopen succeeds.
+        f = None
         try:
-            with os.fdopen(fd, "w", encoding="utf-8") as f:
-                json.dump(cred, f, indent=2)
+            f = os.fdopen(fd, "w", encoding="utf-8")
+            json.dump(cred, f, indent=2)
         except Exception:
-            os.close(fd)
+            # Only close fd manually if os.fdopen itself failed (f is None),
+            # because os.fdopen did not take ownership yet.
+            if f is None:
+                os.close(fd)
             raise
+        finally:
+            if f is not None:
+                f.close()

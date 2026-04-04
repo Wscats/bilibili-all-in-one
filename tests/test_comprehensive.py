@@ -1256,19 +1256,6 @@ class TestPublisher(unittest.TestCase):
             ))
             self.assertTrue(result["success"])
 
-    def test_delete_success(self):
-        info_resp = _mock_response(_bilibili_ok(_video_info_payload()))
-        delete_resp = _mock_response(_bilibili_ok({}))
-        _patch_client(self.app.publisher, [info_resp, delete_resp])
-        result = _run(self.app.execute("publisher", "delete", bvid="BV1xx411c7mD"))
-        self.assertTrue(result["success"])
-        self.assertEqual(result["bvid"], "BV1xx411c7mD")
-
-    def test_delete_video_not_found(self):
-        _patch_client(self.app.publisher, [_mock_response(_bilibili_error(-404, "Video not found"))])
-        result = _run(self.app.execute("publisher", "delete", bvid="BV_nonexist"))
-        self.assertFalse(result["success"])
-
     def test_edit_success(self):
         """Edit requires file_path for re-upload."""
         with tempfile.TemporaryDirectory() as tmpdir:

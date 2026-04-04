@@ -1,7 +1,7 @@
 {
   "name": "bilibili-all-in-one",
   "description": "A comprehensive Bilibili toolkit that integrates hot trending monitoring, video downloading, video watching/playback, subtitle downloading, and video publishing capabilities into a single skill.",
-"version": "1.0.13",
+"version": "1.0.17",
   "author": "wscats",
   "license": "MIT",
   "homepage": "https://github.com/wscats/bilibili-all-in-one",
@@ -17,7 +17,6 @@
     "command": "pip install -r requirements.txt",
     "packages": [
       "httpx>=0.24.0",
-      "bilibili-api-python>=16.0.0",
       "aiohttp>=3.8.0",
       "beautifulsoup4>=4.12.0",
       "lxml>=4.9.0",
@@ -36,7 +35,7 @@
     {
       "name": "BILIBILI_BILI_JCT",
       "type": "string",
-      "description": "Bilibili bili_jct cookie (CSRF token) for all write operations (upload, edit, delete).",
+      "description": "Bilibili bili_jct cookie (CSRF token) for all write operations (upload, edit).",
       "required": true,
       "sensitive": true
     },
@@ -65,15 +64,13 @@
     "protocol": "HTTPS only",
     "allowed_domains": [
       "api.bilibili.com",
-      "member.bilibili.com",
-      "upos-sz-upcdnbda2.bilivideo.com",
-      "www.bilibili.com",
-      "passport.bilibili.com",
-      "static.geetest.com"
+        "member.bilibili.com",
+        "upos-sz-upcdnbda2.bilivideo.com",
+        "www.bilibili.com"
     ],
     "third_party_telemetry": false,
     "analytics": false,
-    "local_server_note": "The delete_with_captcha action starts a temporary local HTTP server (127.0.0.1) for geetest captcha verification. The server auto-closes after verification. The geetest JS (static.geetest.com) is loaded client-side in the browser only."
+    "local_server_note": ""
   },
   "files": [
     "main.py",
@@ -274,8 +271,8 @@
         "properties": {
           "action": {
             "type": "string",
-            "enum": ["upload", "draft", "schedule", "edit", "delete", "delete_with_captcha"],
-            "description": "The action to perform: upload (upload and publish), draft (save as draft), schedule (schedule publication), edit (edit existing video), delete (delete a video), delete_with_captcha (delete with browser captcha verification)"
+            "enum": ["upload", "draft", "schedule", "edit"],
+            "description": "The action to perform: upload (upload and publish), draft (save as draft), schedule (schedule publication), edit (edit existing video)"
           },
           "file_path": {
             "type": "string",
@@ -308,7 +305,7 @@
           },
           "bvid": {
             "type": "string",
-            "description": "BV number of existing video (for edit/delete actions)"
+            "description": "BV number of existing video (for edit action)"
           },
           "credential": {
             "type": "object",
@@ -352,13 +349,11 @@
   "permissions": {
     "network": {
       "description": "HTTP/HTTPS requests to Bilibili official APIs",
-      "allowed_domains": [
+    "allowed_domains": [
       "api.bilibili.com",
         "member.bilibili.com",
         "www.bilibili.com",
-        "upos-sz-upcdnbda2.bilivideo.com",
-        "passport.bilibili.com",
-        "static.geetest.com"
+        "upos-sz-upcdnbda2.bilivideo.com"
       ]
     },
     "filesystem": {

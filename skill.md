@@ -7,7 +7,7 @@ description: >
   Supports Bilibili session cookie authentication for publishing and
   high-quality downloads. Requests go to official Bilibili API endpoints
   over HTTPS.
-version: 1.0.13
+version: 1.0.17
 type: code
 implementation: python
 interface: cli-and-api
@@ -47,7 +47,7 @@ A comprehensive Bilibili toolkit that integrates hot trending monitoring, video 
 > These are sensitive Bilibili session cookies needed for authenticated operations (publishing, high-quality downloads).
 > Features that do NOT require authentication: hot monitoring, standard-quality downloads, subtitle listing, danmaku, stats viewing.
 >
-> **📦 Install:** `pip install -r requirements.txt` (all standard PyPI packages: httpx, bilibili-api-python, aiohttp, beautifulsoup4, lxml, requests)
+> **📦 Install:** `pip install -r requirements.txt` (all standard PyPI packages: httpx, aiohttp, beautifulsoup4, lxml, requests)
 >
 > **🔗 Source:** [github.com/wscats/bilibili-all-in-one](https://github.com/wscats/bilibili-all-in-one)
 
@@ -63,7 +63,7 @@ A comprehensive Bilibili toolkit that integrates hot trending monitoring, video 
 | 查看视频播放量、点赞数、数据追踪、对比 | 👀 Watcher | "播放量"、"点赞"、"数据"、"统计"、"对比"、"监控"、"追踪"、"观看量" |
 | 下载字幕、转换字幕格式、合并字幕 | 📝 Subtitle | "字幕"、"CC"、"SRT"、"ASS"、"字幕下载"、"字幕转换"、"翻译" |
 | 播放视频、获取弹幕、播放列表 | ▶️ Player | "播放"、"弹幕"、"播放地址"、"分P"、"播放列表"、"danmaku" |
-| 上传视频、发布、定时发布、草稿、编辑、删除 | 📤 Publisher | "上传"、"发布"、"投稿"、"定时发布"、"草稿"、"编辑视频"、"删除视频" |
+| 上传视频、发布、定时发布、草稿、编辑 | 📤 Publisher | "上传"、"发布"、"投稿"、"定时发布"、"草稿"、"编辑视频" |
 
 | 提及B站链接或BV号 | 自动识别 | `BV*`、`bilibili.com/video/*`、`b23.tv/*` |
 
@@ -97,7 +97,6 @@ pip install -r requirements.txt
 ### Dependencies
 
 - `httpx >= 0.24.0`
-- `bilibili-api-python >= 16.0.0`
 - `aiohttp >= 3.8.0`
 - `beautifulsoup4 >= 4.12.0`
 - `lxml >= 4.9.0`
@@ -153,7 +152,7 @@ This skill handles **sensitive Bilibili session cookies**. Please read the follo
 | Concern | Detail |
 |---|---|
 | **What credentials are needed?** | `SESSDATA`, `bili_jct`, `buvid3` — Bilibili **full browser session cookies** (not limited API keys). Providing them grants broad access to your Bilibili account. |
-| **Which features require authentication?** | Publishing (upload/edit/delete/schedule/draft), downloading 1080p+/4K quality videos |
+| **Which features require authentication?** | Publishing (upload/edit/schedule/draft), downloading 1080p+/4K quality videos |
 | **Which features work WITHOUT credentials?** | Hot monitoring, standard-quality downloads, subtitle listing, danmaku fetching, stats viewing |
 | **Where are credentials sent?** | To official Bilibili API endpoints (`api.bilibili.com`, `member.bilibili.com`, `passport.bilibili.com`) over HTTPS only |
 | **Are credentials persisted to disk?** | **NO** — unless you explicitly call `auth.save_to_file()`. Credentials stay in memory by default |
@@ -174,14 +173,11 @@ This skill handles **sensitive Bilibili session cookies**. Please read the follo
 | Domain | Purpose |
 |---|---|
 | `api.bilibili.com` | Video info, stats, hot lists, subtitles, danmaku, playback URLs |
-| `member.bilibili.com` | Video publishing (upload, edit, delete) |
+| `member.bilibili.com` | Video publishing (upload, edit) |
 | `upos-sz-upcdnbda2.bilivideo.com` | Video file upload CDN |
 | `www.bilibili.com` | Web page scraping fallback |
-| `passport.bilibili.com` | Geetest captcha challenge for delete verification |
-| `static.geetest.com` | Geetest captcha JS SDK (loaded client-side in browser only) |
-| `127.0.0.1` (local) | Temporary local HTTP server for captcha verification page |
+| `passport.bilibili.com` | Authentication verification |
 
-> **Note on `delete_with_captcha`:** This action starts a temporary local HTTP server on `127.0.0.1` and opens a browser page for geetest captcha verification. The geetest JS (`static.geetest.com`) is loaded **client-side in the user's browser only** — it is NOT executed server-side. The local server auto-closes immediately after verification completes. No data is sent to any third party; the captcha result is used locally to confirm the user's intent before calling the official Bilibili delete API.
 
 
 ### Credential Requirement by Module
@@ -494,8 +490,6 @@ Publish videos to Bilibili. Supports uploading videos, setting metadata, schedul
 | `draft` | Save as draft | `file_path`, `title`, `description`, `tags`, `category`, `cover_path` |
 | `schedule` | Schedule future publication | `file_path`, `title`, `schedule_time`, `description`, `tags`, `category`, `cover_path` |
 | `edit` | Edit existing video metadata | `bvid`, `title`, `description`, `tags`, `cover_path` |
-| `delete` | Delete a video | `bvid` |
-| `delete_with_captcha` | Delete with browser captcha verification | `bvid`, `port`, `auto_open` |
 
 #### Upload Parameters
 
@@ -524,12 +518,6 @@ python main.py publisher schedule '{"file_path": "./video.mp4", "title": "Schedu
 
 # Edit video metadata
 python main.py publisher edit '{"bvid": "BV1xx411c7mD", "title": "New Title", "tags": ["updated"]}'
-
-# Delete a video
-python main.py publisher delete '{"bvid": "BV1xx411c7mD"}'
-
-# Delete with captcha verification (opens browser)
-python main.py publisher delete_with_captcha '{"bvid": "BV1xx411c7mD"}'
 ```
 
 ```python

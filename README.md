@@ -7,7 +7,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/python-%3E%3D3.8-blue?logo=python&logoColor=white" />
   <img src="https://img.shields.io/badge/license-MIT-green" />
-  <img src="https://img.shields.io/badge/version-1.0.9-orange" />
+  <img src="https://img.shields.io/badge/version-1.0.17-orange" />
   <img src="https://img.shields.io/badge/platform-Bilibili-pink" />
 </p>
 
@@ -330,7 +330,7 @@ playlist = await app.execute("player", "get_playlist", url="BV1xx411c7mD")
 | `draft` | 保存为草稿 | `file_path`, `title`, `description`, `tags`, `category` |
 | `schedule` | 定时发布 | `file_path`, `title`, `schedule_time`, `description`, `tags` |
 | `edit` | 编辑已发布视频 | `bvid`, `title`, `description`, `tags`, `cover_path` |
-| `delete` | 删除视频 | `bvid` |
+| `delete` | 删除视频（需 `confirm=true`） | `bvid`, `confirm` |
 
 **上传参数说明：**
 
@@ -358,8 +358,8 @@ python main.py publisher schedule '{"file_path": "./video.mp4", "title": "定时
 # 编辑视频信息
 python main.py publisher edit '{"bvid": "BV1xx411c7mD", "title": "新标题", "tags": ["更新"]}'
 
-# 删除视频
-python main.py publisher delete '{"bvid": "BV1xx411c7mD"}'
+# 删除视频（需要 confirm=true 安全确认）
+python main.py publisher delete '{"bvid": "BV1xx411c7mD", "confirm": true}'
 ```
 
 ```python
