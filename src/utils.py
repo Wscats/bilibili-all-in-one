@@ -164,20 +164,58 @@ def ensure_dir(directory: str) -> str:
 def sanitize_filename(filename: str) -> str:
     """Sanitize a string for use as a filename.
 
+    Hardened against path-injection and command-argument-injection attacks
+    that could leak into the one subprocess call in this skill
+    (`ffmpeg`, in src/downloader.py):
+
+      * All filesystem path separators are replaced, so the returned value
+        cannot traverse directories (no `..`, no `/`, no `\\`).
+      * NUL bytes and ASCII control characters are replaced — NUL would
+        truncate paths at the execve() boundary, control chars can confuse
+        terminals if the path is ever logged.
+      * A leading `-` is neutralized so the string cannot be misinterpreted
+        as a CLI flag by any downstream tool.
+      * Windows reserved device names (CON, PRN, AUX, NUL, COM1-9, LPT1-9)
+        are rewritten.
+
     Args:
         filename: The original filename.
 
     Returns:
-        Sanitized filename safe for all operating systems.
+        Sanitized filename safe for all operating systems and safe to pass
+        as a positional argv element to a subprocess.
     """
-    # Remove or replace invalid characters
+    if not isinstance(filename, str):
+        filename = str(filename)
+
+    # Remove / replace invalid characters (including NUL and control chars).
     invalid_chars = r'[<>:"/\\|?*\x00-\x1f]'
     sanitized = re.sub(invalid_chars, "_", filename)
-    # Remove trailing dots and spaces
+
+    # Explicitly neutralize directory traversal attempts.
+    sanitized = sanitized.replace("..", "_")
+
+    # Remove trailing dots and spaces (Windows also dislikes these).
     sanitized = sanitized.strip(". ")
-    # Limit length
+
+    # Prevent the result from being interpreted as a CLI flag downstream.
+    if sanitized.startswith("-"):
+        sanitized = "_" + sanitized[1:]
+
+    # Windows reserved device names (case-insensitive, with or without ext).
+    reserved = {
+        "CON", "PRN", "AUX", "NUL",
+        *(f"COM{i}" for i in range(1, 10)),
+        *(f"LPT{i}" for i in range(1, 10)),
+    }
+    base = sanitized.split(".", 1)[0].upper()
+    if base in reserved:
+        sanitized = "_" + sanitized
+
+    # Limit length (keeps us well under NAME_MAX on common filesystems).
     if len(sanitized) > 200:
         sanitized = sanitized[:200]
+
     return sanitized or "untitled"
 
 

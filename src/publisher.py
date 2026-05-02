@@ -21,6 +21,35 @@ ADD_VIDEO_URL = f"{MEMBER_API_BASE}/x/vu/web/add"
 EDIT_VIDEO_URL = f"{MEMBER_API_BASE}/x/vu/web/edit"
 COVER_UPLOAD_URL = f"{MEMBER_API_BASE}/x/vu/web/cover/up"
 
+# Destructive actions that mutate the user's Bilibili account. These MUST be
+# confirmed explicitly by the caller (dry_run=False AND confirm=True) before
+# any side effect is performed. This mitigates "Tool Misuse and Exploitation"
+# where an upstream agent might invoke publish/edit actions without explicit
+# user approval.
+_DESTRUCTIVE_ACTIONS = {"upload", "draft", "schedule", "edit"}
+
+
+def _build_plan(action: str, **params: Any) -> Dict[str, Any]:
+    """Build a human-readable plan describing a destructive publishing action.
+
+    The plan is returned to the caller (agent/user) when `dry_run=True` or
+    `confirm=False` so that the *exact* title, tags, schedule, target video
+    and file path can be reviewed before the action is actually executed.
+    """
+    redacted = {k: v for k, v in params.items() if k not in ("credential",)}
+    return {
+        "success": True,
+        "dry_run": True,
+        "action": action,
+        "will_mutate_account": True,
+        "preview": redacted,
+        "message": (
+            "Dry-run preview. No request was sent to Bilibili. "
+            "Review the preview above, then re-invoke with "
+            "dry_run=False AND confirm=True to actually perform the action."
+        ),
+    }
+
 
 class BilibiliPublisher:
     """Publish videos to Bilibili.
@@ -57,6 +86,8 @@ class BilibiliPublisher:
         dynamic: str = "",
         no_reprint: int = 1,
         open_elec: int = 0,
+        dry_run: bool = True,
+        confirm: bool = False,
     ) -> Dict[str, Any]:
         """Upload and publish a video to Bilibili.
 
@@ -70,9 +101,16 @@ class BilibiliPublisher:
             dynamic: Dynamic/feed text.
             no_reprint: 1 = original, 0 = repost.
             open_elec: 1 = enable charging, 0 = disable.
+            dry_run: If True (default), return a preview without calling the
+                     Bilibili API. The caller MUST review the preview and
+                     re-invoke with dry_run=False + confirm=True to actually
+                     publish. This is a safety guardrail against agents
+                     inadvertently mutating the user's public channel.
+            confirm: Must be set to True together with dry_run=False to
+                     authorize the publish action.
 
         Returns:
-            Upload result with video info.
+            Upload result with video info, or a dry-run preview.
         """
         if not os.path.exists(file_path):
             return {"success": False, "message": f"File not found: {file_path}"}
@@ -84,6 +122,26 @@ class BilibiliPublisher:
         tags = tags or ["bilibili"]
         if len(tags) > 12:
             tags = tags[:12]
+
+        # Safety guardrail: require explicit confirmation before mutating
+        # the user's public Bilibili channel.
+        if dry_run or not confirm:
+            return _build_plan(
+                "upload",
+                file_path=file_path,
+                title=title,
+                description=description,
+                tags=tags,
+                category=category,
+                cover_path=cover_path,
+                dynamic=dynamic,
+                no_reprint=no_reprint,
+                open_elec=open_elec,
+            )
+        _logger.warning(
+            "[publisher] Executing CONFIRMED upload: title=%r tags=%r file=%r",
+            title, tags, file_path,
+        )
 
         # Step 1: Pre-upload to get upload params
         preupload_result = await self._preupload(file_path)
@@ -128,6 +186,8 @@ class BilibiliPublisher:
         tags: Optional[List[str]] = None,
         category: str = "171",
         cover_path: Optional[str] = None,
+        dry_run: bool = True,
+        confirm: bool = False,
     ) -> Dict[str, Any]:
         """Save a video as draft.
 
@@ -138,14 +198,31 @@ class BilibiliPublisher:
             tags: List of tags.
             category: Category TID.
             cover_path: Path to cover image.
+            dry_run: See `upload()`. Default True.
+            confirm: See `upload()`. Default False.
 
         Returns:
-            Draft save result.
+            Draft save result, or a dry-run preview.
         """
         if not os.path.exists(file_path):
             return {"success": False, "message": f"File not found: {file_path}"}
 
         tags = tags or ["bilibili"]
+
+        if dry_run or not confirm:
+            return _build_plan(
+                "draft",
+                file_path=file_path,
+                title=title,
+                description=description,
+                tags=tags,
+                category=category,
+                cover_path=cover_path,
+            )
+        _logger.warning(
+            "[publisher] Executing CONFIRMED draft save: title=%r file=%r",
+            title, file_path,
+        )
 
         # Upload video file
         preupload_result = await self._preupload(file_path)
@@ -211,6 +288,8 @@ class BilibiliPublisher:
         tags: Optional[List[str]] = None,
         category: str = "171",
         cover_path: Optional[str] = None,
+        dry_run: bool = True,
+        confirm: bool = False,
     ) -> Dict[str, Any]:
         """Schedule a video for future publication.
 
@@ -222,9 +301,11 @@ class BilibiliPublisher:
             tags: List of tags.
             category: Category TID.
             cover_path: Path to cover image.
+            dry_run: See `upload()`. Default True.
+            confirm: See `upload()`. Default False.
 
         Returns:
-            Schedule result.
+            Schedule result, or a dry-run preview.
         """
         import datetime
 
@@ -239,6 +320,22 @@ class BilibiliPublisher:
             return {"success": False, "message": f"Invalid schedule time format: {schedule_time}"}
 
         tags = tags or ["bilibili"]
+
+        if dry_run or not confirm:
+            return _build_plan(
+                "schedule",
+                file_path=file_path,
+                title=title,
+                schedule_time=schedule_time,
+                description=description,
+                tags=tags,
+                category=category,
+                cover_path=cover_path,
+            )
+        _logger.warning(
+            "[publisher] Executing CONFIRMED schedule: title=%r schedule_time=%r file=%r",
+            title, schedule_time, file_path,
+        )
 
         # Upload video file
         preupload_result = await self._preupload(file_path)
@@ -280,6 +377,8 @@ class BilibiliPublisher:
         tags: Optional[List[str]] = None,
         cover_path: Optional[str] = None,
         file_path: Optional[str] = None,
+        dry_run: bool = True,
+        confirm: bool = False,
     ) -> Dict[str, Any]:
         """Edit an existing video's metadata.
 
@@ -290,10 +389,27 @@ class BilibiliPublisher:
             tags: New tags (if changing).
             cover_path: New cover image path (if changing).
             file_path: Path to video file (required for re-upload).
+            dry_run: See `upload()`. Default True.
+            confirm: See `upload()`. Default False.
 
         Returns:
-            Edit result.
+            Edit result, or a dry-run preview.
         """
+        if dry_run or not confirm:
+            return _build_plan(
+                "edit",
+                bvid=bvid,
+                title=title,
+                description=description,
+                tags=tags,
+                cover_path=cover_path,
+                file_path=file_path,
+            )
+        _logger.warning(
+            "[publisher] Executing CONFIRMED edit: bvid=%r title=%r file=%r",
+            bvid, title, file_path,
+        )
+
         # First get current video info
         async with self._get_client() as client:
             resp = await client.get(

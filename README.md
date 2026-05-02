@@ -348,13 +348,15 @@ playlist = await app.execute("player", "get_playlist", url="BV1xx411c7mD")
 上传视频到 B站，支持定时发布和草稿管理。
 
 > ⚠️ **此模块所有操作均需要登录认证**
+>
+> 🔐 **安全默认：Dry-Run 模式** — `upload` / `draft` / `schedule` / `edit` 这 4 个会修改你的 B站账号的操作，**默认只会返回预览，不会真正调用 B站 API**。你必须显式传入 `dry_run=False` **并且** `confirm=True` 才会真正执行。该默认值是对 ClawScan 报告中 *Tool Misuse and Exploitation* 风险的缓解措施，用于防止 Agent 在未经你明确确认的情况下污染你的公开频道。
 
 | 操作 | 说明 | 参数 |
 |---|---|---|
-| `upload` | 上传并发布视频 | `file_path`, `title`, `description`, `tags`, `category`, `cover_path` |
-| `draft` | 保存为草稿 | `file_path`, `title`, `description`, `tags`, `category` |
-| `schedule` | 定时发布 | `file_path`, `title`, `schedule_time`, `description`, `tags` |
-| `edit` | 编辑已发布视频 | `bvid`, `file_path`, `title`, `description`, `tags`, `cover_path` |
+| `upload` | 上传并发布视频 | `file_path`, `title`, `description`, `tags`, `category`, `cover_path`, `dry_run`, `confirm` |
+| `draft` | 保存为草稿 | `file_path`, `title`, `description`, `tags`, `category`, `dry_run`, `confirm` |
+| `schedule` | 定时发布 | `file_path`, `title`, `schedule_time`, `description`, `tags`, `dry_run`, `confirm` |
+| `edit` | 编辑已发布视频 | `bvid`, `file_path`, `title`, `description`, `tags`, `cover_path`, `dry_run`, `confirm` |
 
 **上传参数说明：**
 
@@ -370,28 +372,43 @@ playlist = await app.execute("player", "get_playlist", url="BV1xx411c7mD")
 | `open_elec` | int | `0` | 1=开启充电，0=关闭 |
 
 ```bash
-# 上传并发布
+# 1) 预演（安全默认）：只返回将要上传/发布的内容，不会真正调用 B站 API
 python main.py publisher upload '{"file_path": "./video.mp4", "title": "我的视频", "description": "Hello World", "tags": ["测试", "演示"]}'
 
-# 保存为草稿
-python main.py publisher draft '{"file_path": "./video.mp4", "title": "草稿视频"}'
+# 2) 仔细 review 上一步返回的 preview，确认无误后，追加 dry_run=false + confirm=true 才会真正发布
+python main.py publisher upload '{"file_path": "./video.mp4", "title": "我的视频", "description": "Hello World", "tags": ["测试", "演示"], "dry_run": false, "confirm": true}'
+
+# 保存为草稿（同样默认 dry-run；确认后再发出）
+python main.py publisher draft '{"file_path": "./video.mp4", "title": "草稿视频", "dry_run": false, "confirm": true}'
 
 # 定时发布
-python main.py publisher schedule '{"file_path": "./video.mp4", "title": "定时视频", "schedule_time": "2025-12-31T20:00:00+08:00"}'
+python main.py publisher schedule '{"file_path": "./video.mp4", "title": "定时视频", "schedule_time": "2025-12-31T20:00:00+08:00", "dry_run": false, "confirm": true}'
 
 # 编辑视频信息（B站要求重新上传视频文件）
-python main.py publisher edit '{"bvid": "BV1xx411c7mD", "file_path": "./video.mp4", "title": "新标题", "tags": ["更新"]}'
+python main.py publisher edit '{"bvid": "BV1xx411c7mD", "file_path": "./video.mp4", "title": "新标题", "tags": ["更新"], "dry_run": false, "confirm": true}'
 ```
 
 ```python
 # Python API（需要认证）
 app = BilibiliAllInOne(sessdata="xxx", bili_jct="xxx", buvid3="xxx")
 
+# 1) 先 dry-run，拿到 preview
+preview = await app.execute("publisher", "upload",
+    file_path="./video.mp4",
+    title="我的视频",
+    description="通过 bilibili-all-in-one 发布",
+    tags=["python", "bilibili"],
+)
+# preview["dry_run"] == True，preview["preview"] 里是将要提交的完整参数
+
+# 2) 用户/调用方 review preview 后，显式确认
 result = await app.execute("publisher", "upload",
     file_path="./video.mp4",
     title="我的视频",
     description="通过 bilibili-all-in-one 发布",
     tags=["python", "bilibili"],
+    dry_run=False,
+    confirm=True,
 )
 
 # 编辑视频（需要提供视频文件路径，B站要求重新上传）
@@ -400,6 +417,8 @@ result = await app.execute("publisher", "edit",
     file_path="./video.mp4",
     title="新标题",
     tags=["更新"],
+    dry_run=False,
+    confirm=True,
 )
 ```
 

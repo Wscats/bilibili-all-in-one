@@ -1,18 +1,53 @@
 """Authentication and credential management for Bilibili API."""
 
 import json
+import logging
 import os
+import stat
+import time
 from typing import Optional, Dict, Any
 
 import httpx
 
 from .utils import DEFAULT_HEADERS, API_BASE
 
+_logger = logging.getLogger("bilibili.auth")
+
 # Default path for persisted credentials (relative to project root)
 DEFAULT_CREDENTIAL_FILE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     ".credentials.json",
 )
+
+# Maximum age (in seconds) of a persisted credential file before it is
+# automatically treated as stale and ignored. Default: 30 days.
+# This limits the blast-radius of a stolen on-disk credential and mitigates
+# "Memory and Context Poisoning" where an old saved session could be silently
+# reused long after the user intended.
+CREDENTIAL_MAX_AGE_SECONDS = 30 * 24 * 60 * 60
+
+
+def _assert_safe_credential_path(filepath: str) -> None:
+    """Refuse to write credentials into world/group-accessible locations.
+
+    Guards against "Memory and Context Poisoning": if the project directory
+    is shared (e.g. /tmp, a world-writable CI workspace, or a network share),
+    another process could read or replace the saved credentials.
+    """
+    directory = os.path.dirname(os.path.abspath(filepath)) or "."
+    try:
+        st = os.stat(directory)
+    except OSError:
+        # Directory doesn't exist yet — caller will create it with os.makedirs.
+        return
+    mode = st.st_mode
+    # Disallow if the directory is group-writable or world-writable
+    if mode & (stat.S_IWGRP | stat.S_IWOTH):
+        raise PermissionError(
+            f"Refusing to persist credentials into {directory!r}: "
+            "directory is group- or world-writable. "
+            "Move the project to a private directory (chmod 700) first."
+        )
 
 
 class BilibiliAuth:
@@ -82,9 +117,40 @@ class BilibiliAuth:
     def _load_from_file(self, filepath: str) -> None:
         """Load credentials from a JSON file.
 
+        Additionally enforces:
+          * File permissions must not grant group/other read access.
+          * File age must be below CREDENTIAL_MAX_AGE_SECONDS; otherwise
+            the file is ignored and a warning is logged (mitigates
+            "Memory and Context Poisoning" via silently reused stale sessions).
+
         Args:
             filepath: Path to the credential JSON file.
         """
+        try:
+            st = os.stat(filepath)
+        except OSError as e:
+            _logger.warning("Cannot stat credential file %s: %s", filepath, e)
+            return
+
+        # Reject credentials readable by group/other (Unix). On Windows these
+        # bits are not meaningful, so the check is effectively a no-op there.
+        if hasattr(os, "geteuid") and (st.st_mode & (stat.S_IRGRP | stat.S_IROTH)):
+            _logger.warning(
+                "Ignoring credential file %s: permissions %o allow other users "
+                "to read it. Fix with: chmod 600 %s",
+                filepath, st.st_mode & 0o777, filepath,
+            )
+            return
+
+        age = time.time() - st.st_mtime
+        if age > CREDENTIAL_MAX_AGE_SECONDS:
+            _logger.warning(
+                "Ignoring credential file %s: it is %d days old (>%d days). "
+                "Re-authenticate and call auth.save_to_file() again if needed.",
+                filepath, int(age / 86400), int(CREDENTIAL_MAX_AGE_SECONDS / 86400),
+            )
+            return
+
         with open(filepath, "r", encoding="utf-8") as f:
             cred = json.load(f)
         self.sessdata = cred.get("sessdata", self.sessdata)
@@ -191,7 +257,12 @@ class BilibiliAuth:
         """Save current credentials to a JSON file.
 
         The file is created with restrictive permissions (owner read/write
-        only, 0600) to minimize exposure risk.
+        only, 0600) to minimize exposure risk. Additionally, the target
+        directory is checked against group/world-writable modes; if the
+        directory is shared, the save is refused (see
+        `_assert_safe_credential_path`). These measures mitigate "Memory and
+        Context Poisoning" where other processes on the host could read or
+        replace the saved session.
 
         Args:
             filepath: Path to save the credential file.
@@ -204,6 +275,9 @@ class BilibiliAuth:
             "buvid3": self.buvid3,
         }
         os.makedirs(os.path.dirname(filepath) or ".", exist_ok=True)
+
+        # Refuse to save into an unsafe directory
+        _assert_safe_credential_path(filepath)
 
         # Open with restrictive permissions (0600 = owner read/write only)
         fd = os.open(filepath, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
@@ -222,3 +296,15 @@ class BilibiliAuth:
         finally:
             if f is not None:
                 f.close()
+
+        # Defensive: re-apply 0600 in case umask or FS quirks altered it.
+        try:
+            os.chmod(filepath, 0o600)
+        except OSError:
+            pass
+
+        _logger.warning(
+            "Credentials persisted to %s (mode 0600). "
+            "Call auth.clear_persisted() when done to remove them.",
+            filepath,
+        )

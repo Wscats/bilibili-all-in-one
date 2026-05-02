@@ -1,0 +1,41 @@
+# Files / directories EXCLUDED from the `clawhub publish` package.
+# Keep this list tight: the published skill should only contain the files
+# listed in skill.json -> "files" plus their supporting assets.
+
+# Release tooling — must never ship to end users of the skill.
+scripts/
+scripts/publish.sh
+
+# VCS / local env / caches
+.git/
+.gitignore
+.gitattributes
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+
+# Local secrets (defensive — should never be committed in the first place)
+.env
+.credentials.json
+credentials.json
+
+# Generated / downloaded artifacts (large, user-specific)
+downloads/
+subtitles/
+dist/
+build/
+*.egg-info/
+
+# Editor / IDE noise
+.idea/
+.vscode/
+.workbuddy/
+
+# Tests are developer-facing, not needed at runtime by the skill consumer
+tests/
+test_*.py
+*_test.py

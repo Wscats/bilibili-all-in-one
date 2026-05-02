@@ -1,7 +1,7 @@
 {
   "name": "bilibili-all-in-one",
   "description": "A comprehensive Bilibili toolkit that integrates hot trending monitoring, video downloading, video watching/playback, subtitle downloading, and video publishing capabilities into a single skill.",
-"version": "1.0.18",
+"version": "1.0.24",
   "author": "wscats",
   "license": "MIT",
   "homepage": "https://github.com/wscats/bilibili-all-in-one",
@@ -16,13 +16,14 @@
     "type": "pip",
     "command": "pip install -r requirements.txt",
     "packages": [
-      "httpx>=0.24.0",
-      "aiohttp>=3.8.0",
-      "beautifulsoup4>=4.12.0",
-      "lxml>=4.9.0",
-      "requests>=2.31.0"
+      "httpx==0.27.2",
+      "aiohttp==3.10.11",
+      "beautifulsoup4==4.12.3",
+      "lxml==5.3.0",
+      "requests==2.32.3"
     ],
-    "source": "pypi"
+    "source": "pypi",
+    "install_recommendation": "Install inside an isolated virtualenv (e.g. python -m venv .venv) to avoid polluting the host site-packages. All dependency versions are pinned exactly."
   },
   "env_vars": [
     {
@@ -56,16 +57,24 @@
   ],
   "credentials": {
     "primary_credential": "BILIBILI_SESSDATA",
-    "credential_type": "full_session_cookies",
+    "credential_type": "bilibili_session_cookies",
     "credential_required_for": "Only the Publisher module (upload/edit/schedule/draft) and high-quality downloads (1080p+/4K) require credentials. All other features (hot monitoring, standard downloads, subtitles, danmaku, stats) work WITHOUT any credentials.",
-    "credential_scope_warning": "These are full browser session cookies (not limited API keys). Providing them grants the skill broad access to your Bilibili account. Use a test/throwaway account.",
-"storage": "in-memory by default. Set persist=True (or env BILIBILI_PERSIST=1) to auto-save/load credentials from .credentials.json with 0600 permissions. Persistence can also be toggled at runtime via auth.persist property.",
+    "scope_limitations": {
+      "outbound_destinations": ["api.bilibili.com", "member.bilibili.com", "upos-sz-upcdnbda2.bilivideo.com", "www.bilibili.com"],
+      "functional_scope": ["video metadata read", "video file upload", "video publish / edit / schedule / draft", "logged-in high-quality playback URLs"],
+      "never_sent_to_third_parties": true,
+      "no_password_required": "The skill never asks for your Bilibili username or password. Only session cookies (which you can revoke at any time from bilibili.com) are accepted.",
+      "revocation": "Log out from bilibili.com or clear cookies to invalidate the credential at any time."
+    },
+    "credential_scope_warning": "These are Bilibili session cookies. Although the skill only uses them against official Bilibili endpoints listed in `scope_limitations.outbound_destinations`, the cookies themselves — if they leak outside this process — could be replayed against Bilibili by other software. Use a test/throwaway account and rotate cookies after use.",
+    "storage": "in-memory by default. Set persist=True (or env BILIBILI_PERSIST=1) to auto-save/load credentials from .credentials.json with 0600 permissions. The file is ignored if older than 30 days, refused if the containing directory is group/world-writable, and can be removed via auth.clear_persisted().",
     "security_notes": [
       "Credentials are NOT persisted to disk by default. Persistence must be explicitly opted-in via persist=True or BILIBILI_PERSIST=1.",
+      "When persisted, the credential file is written with mode 0600, refused in unsafe directories, and auto-expires after 30 days.",
       "Prefer passing credentials via environment variables or in-memory parameters.",
       "All API requests go to official Bilibili endpoints over HTTPS.",
       "Use a test/throwaway Bilibili account for evaluation purposes.",
-      "These are full session cookies — treat them as highly sensitive. They grant broad account access, not just limited API scope."
+      "Session cookies can be revoked any time by logging out of bilibili.com or clearing browser cookies."
     ]
   },
   "network": {
@@ -269,7 +278,13 @@
     },
     {
       "name": "bilibili_publisher",
-      "description": "Publish videos to Bilibili. Supports uploading videos, setting metadata, scheduling publications, and managing drafts.",
+      "description": "Publish videos to Bilibili. Supports uploading videos, setting metadata, scheduling publications, and managing drafts. All destructive actions (upload/draft/schedule/edit) default to dry-run mode and require explicit dry_run=false AND confirm=true before any change is sent to Bilibili.",
+      "safety": {
+        "destructive": true,
+        "requires_explicit_confirmation": true,
+        "confirmation_parameters": ["dry_run", "confirm"],
+        "default_mode": "dry_run preview — no mutation is performed unless the caller passes dry_run=false AND confirm=true"
+      },
       "parameters": {
         "type": "object",
         "properties": {
@@ -310,6 +325,16 @@
           "bvid": {
             "type": "string",
             "description": "BV number of existing video (for edit action)"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "If true (default), return a preview of what would be published but do NOT call the Bilibili API. Required to be set to false (together with confirm=true) to actually mutate the user's Bilibili account.",
+            "default": true
+          },
+          "confirm": {
+            "type": "boolean",
+            "description": "Must be set to true (together with dry_run=false) to authorize the destructive publish/edit action. Safety guardrail against agents invoking publish without explicit user approval.",
+            "default": false
           },
           "credential": {
             "type": "object",
@@ -364,6 +389,27 @@
       "description": "Read/write access for downloading videos, subtitles, and uploading files",
       "operations": ["read_local_files", "write_downloads", "write_subtitles"],
       "note": "Credential files are NEVER auto-created. save_to_file() must be explicitly called by the user."
+    },
+    "subprocess": {
+      "description": "The skill spawns exactly ONE external process: the `ffmpeg` binary, and only to mux a locally-downloaded video-only stream with a locally-downloaded audio-only stream into a single output file.",
+      "invocations": [
+        {
+          "binary": "ffmpeg",
+          "location": "src/downloader.py :: BilibiliDownloader._merge_streams",
+          "argv_shape": ["ffmpeg", "-y", "-nostdin", "-loglevel", "error", "-i", "<local_video_tmp>", "-i", "<local_audio_tmp>", "-c", "copy", "<local_output_path>"],
+          "argument_sources": "All three path arguments are produced by this process from `sanitize_filename(video.title)` + `sanitize_filename(pages[i].part)` + constant suffixes `.video.tmp` / `.audio.tmp`. No user-supplied string, URL, cookie, remote API response, or shell metacharacter ever reaches the argv.",
+          "shell": false,
+          "uses_shell_true": false,
+          "uses_os_system": false,
+          "uses_os_popen": false,
+          "binary_resolution": "Absolute path resolved once via `shutil.which('ffmpeg')` — no PATH lookup at execve() time.",
+          "environment": "Minimal — only PATH is forwarded; HOME / LD_* / credential-bearing env vars are stripped.",
+          "io": "stdin=/dev/null, stdout=/dev/null, stderr=/dev/null",
+          "timeout_seconds": 1800,
+          "purpose": "Audio/video stream muxing (DASH -> single MP4). This is standard, expected ffmpeg usage, not arbitrary code execution."
+        }
+      ],
+      "no_other_subprocesses": "The entire codebase contains NO other calls to subprocess.*, os.system, os.popen, eval, exec, or shell=True. This is enforced by grep audit on every release."
     }
   },
   "always": false,
